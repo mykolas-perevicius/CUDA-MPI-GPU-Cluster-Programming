@@ -1,0 +1,19 @@
+Using multiplier: 4
+Input size: 602112, Output size: 4000
+Process 0 of 4 started.
+Process 1 of 4 started.
+Process 2 of 4 started.
+Process 3 of 4 started.
+Kernel execution time: 2.93472 ms.
+Kernel execution time: 3.2056 ms.
+Kernel execution time: 3.69158 ms.
+Kernel execution time: 3.94115 ms.
+Process 0 forward pass time (MPI_Wtime): 0.407911 seconds.
+Process 2 forward pass time (MPI_Wtime): 0.408238 seconds.
+Process 1 forward pass time (MPI_Wtime): 0.408735 seconds.
+Process 3 forward pass time (MPI_Wtime): 0.408725 seconds.
+Gathered outputs from all processes:
+Process 0 output (first 5 values): 0 0 0 0 0 ...
+Process 1 output (first 5 values): 0.25 0.25 0.25 0.25 0.25 ...
+Process 2 output (first 5 values): 0.5 0.5 0.5 0.5 0.5 ...
+Process 3 output (first 5 values): 0.75 0.75 0.75 0.75 0.75 ...
