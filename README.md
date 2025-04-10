@@ -1,8 +1,4 @@
-Below is an extensively expanded README that reflects a thoughtful, well‐organized repository structure for your CS485 course work. This document covers the entire repo—from homework assignments to the final MPI+CUDA project implementation of AlexNet inference—as well as build, test, automation, and AI integration details.
 
----
-
-```markdown
 # CS485: GPU Cluster Programming (MPI+CUDA) - Comprehensive Repository
 
 Welcome to the official repository for CS485: GPU Cluster Programming at NJIT. This repo contains all course-related materials—homework assignments, the final project code (including our AlexNet inference implementation), automation scripts, configuration files, and supporting documentation. Our objective is to develop robust, high-performance parallel programs using MPI, CUDA, and their combination for GPU clusters.
@@ -315,4 +311,3 @@ If you encounter issues or have questions during development:
 
 Happy coding—and good luck with your high-performance computing journey in CS485!
 
-```
