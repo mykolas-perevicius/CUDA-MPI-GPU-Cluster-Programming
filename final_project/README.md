@@ -1,142 +1,180 @@
-# CS485: GPU Cluster Programming (MPI+CUDA) - Project Workspace
+# CS485: GPU Cluster Programming (MPI+CUDA) – Project Workspace
 
-This repository contains homework assignments, final project code, automation scripts, testing frameworks, and resources for the CS485 GPU Cluster Programming course at NJIT. The objective is to develop, validate, and optimize MPI, CUDA, and MPI+CUDA applications, ensuring compatibility with the required Fedora 37 environment.
+This repository is the central hub for our CS485 GPU Cluster Programming course at NJIT. It includes homework assignments, final project code (an evolving AlexNet inference implementation), automation scripts, and additional resources. Everything is designed to streamline the development, testing, and submission workflows for MPI and CUDA programs running on Fedora 37 with GCC 12 and CUDA Toolkit 12.x.
 
-**Version:** 1.2 (Updated with AlexNet Implementation and extended testing scripts)
+## Table of Contents
+1. [Course Overview](#course-overview)
+2. [Project Objectives](#project-objectives)
+3. [Key Technologies & Environment](#key-technologies--environment)
+4. [Repository Structure](#repository-structure)
+5. [Current Implementation Status](#current-implementation-status)
+6. [Development Workflow](#development-workflow)
+7. [Automation Scripts](#automation-scripts)
+8. [Build & Test Instructions](#build--test-instructions)
+9. [Submission Guidelines](#submission-guidelines)
+10. [Troubleshooting](#troubleshooting)
+11. [Future Directions](#future-directions)
+12. [References & Resources](#references--resources)
 
----
+## 1. Course Overview
+**Course:** CS485 – Selected Topics: GPU Cluster Programming (MPI+CUDA)  
+**Instructor:** Andrew Sohn, NJIT  
+**Topics:** 
+- High-performance computing (HPC) fundamentals
+- Parallel architectures (MIMD, SIMD, SPMD)
+- MPI for distributed memory systems (Point-to-Point, Collective, One-Sided)
+- CUDA for GPU acceleration (architecture, memory management, kernel optimization)
+- Data-parallel approaches on a GPU cluster (MPI + CUDA)
+- Real-world HPC workflows, debugging, and performance tuning
 
-## Course Information
+**Required Grading Environment:** 
+- **OS:** Fedora 37  
+- **Compilers:** GCC 12  
+- **GPU Toolkit:** CUDA 12.x  
 
-- **Course:** CS485 Selected Topics: GPU Cluster Programming
-- **Instructor:** Andrew Sohn
-- **Topics:** MPI, CUDA, GPU Cluster Programming, Parallel Architectures
-- **Key Technologies:** C, C++, CUDA, MPI, Linux (Fedora 37), Bash, Make
-- **Course Webpage:** [http://web.njit.edu/~sohna/cs485](http://web.njit.edu/~sohna/cs485)
-- **Textbooks:**
-  - MPI: A Message Passing Interface Standard v3.1 (Free)
-  - Programming Massively Parallel Processors (PMPP), 4th Ed.
-- **Required Grading Environment:** Fedora 37, GCC 12, CUDA Toolkit 12.x
+All final submissions must compile and run under this environment, using an automated grading script.
 
----
+**Relevant Links:**
+- [Course Webpage](http://web.njit.edu/~sohna/cs485)
+- [MPI v3.1 Standard](https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report.pdf)
+- [Programming Massively Parallel Processors (4th Ed.)](https://www.elsevier.com/books/programming-massively-parallel-processors-a-hands-on-approach/kirk/978-0-323-91231-0)
 
-## Project Goals
+## 2. Project Objectives
+1. **Complete Homework Assignments:** Tackle progressive homework tasks (MPI basics, CUDA kernels, advanced MPI+CUDA), ensuring correctness and performance.
+2. **Develop a Final Project:** An AlexNet-based inference engine that demonstrates multi-GPU parallelism using MPI+CUDA, achieving tangible speedup over single-GPU or single-node baselines.
+3. **Automate Everything:** Provide scripts for scaffolding, building, testing, and packaging to ensure reproducible results and consistency with the grading environment.
+4. **Maintain Clear Documentation:** Keep each component thoroughly documented (comments, readmes, script usage guides).
+5. **Use AI Assistance for Learning:** Leverage AI chat for code summaries, potential exam questions, debugging, and deeper HPC insights.
 
-1. Complete all assignments with correctness and optimal performance.
-2. Implement and benchmark AlexNet inference using MPI+CUDA, demonstrating significant parallel speedup.
-3. Automate build, test, and packaging workflows using scripts.
-4. Maintain clean, well-documented, and organized code.
-5. Utilize AI assistance effectively for development, debugging, and conceptual clarity.
+## 3. Key Technologies & Environment
+- **MPI (Open MPI)**: For distributing computation across multiple Linux nodes or multiple ranks on one node. Key functions include `MPI_Init`, `MPI_Bcast`, `MPI_Allreduce`, etc.
+- **CUDA (NVIDIA)**: For GPU kernel development, memory transfers, and HPC acceleration. Key toolkit components include `nvcc`, `cudaMemcpy`, `cudaEvent`, and advanced libraries (cuBLAS/cuDNN).
+- **Fedora 37** with **GCC 12** and **CUDA 12.x**: Mandatory environment for final grading. We simulate or partially test this environment locally (WSL2 with Ubuntu + custom GCC 12 + CUDA 12.x).
+- **Bash & Make**: For automation and build workflows. Some homeworks also generate CMake files for local convenience.
+- **AI Tools**: Used for generating code explanations, debugging hints, and thorough documentation.
 
----
-
-## Current Implementation Status
-
-### AlexNet Inference (MPI+CUDA)
-- **Implemented Layers:** Conv1 → ReLU1 → MaxPool1 → Conv2 → ReLU2 → MaxPool2 → LRN2
-- **Data Parallelism:** Each MPI rank processes distinct input data; full model weights are broadcast using MPI.
-- **CUDA Kernels:** Naive implementation provided for clarity; optimization planned.
-- **Automated Testing:** Comprehensive testing script available; runs with varying MPI ranks and data sizes, reporting execution times and correctness.
-
----
-
-## Repository Structure
-
+## 4. Repository Structure
 ```
 .
-├── README.md
-├── final_project/
-│   ├── include/         # Header files (layers.hpp, alexnet.hpp)
-│   ├── src/             # Source files (main.cpp, alexnet_hybrid.cu, layers.cu)
-│   ├── Makefile         # Builds project executables
-│   └── scripts/
-│       ├── test_final.sh   # Automated tests with MPI and CUDA
-│       └── summarize_results.sh # Summarizes test outputs
-├── homeworks/
-├── scripts/             # General automation scripts
-└── docs/
-    └── notes.md         # Development notes and insights
+├── README.md                # This readme
+├── homeworks/              # Homework assignments
+│   └── hwX/
+│       ├── src/           # Source code (template.c/.cu)
+│       ├── Makefile       # Generated makefile for submission
+│       ├── CMakeLists.txt # For local dev (HW4+)
+│       ├── build/         # Local build folder (ignored in submission)
+│       └── summary.md     # Summaries, notes, potential exam Qs
+├── final_project/         # Final project: AlexNet MPI+CUDA
+│   ├── include/          # Headers (layers.hpp, alexnet.hpp, etc.)
+│   ├── src/             # Source (main.cpp, alexnet_hybrid.cu, layers.cu)
+│   ├── Makefile         # Build instructions (produces 'template', etc.)
+│   └── scripts/         # Additional scripts (test_final.sh, etc.)
+├── scripts/              # Global automation scripts
+│   ├── scaffold_hw.sh   # Creates new homework structure
+│   ├── test_hw.sh      # Builds/tests HW with local run
+│   ├── package_hw.sh   # Packages HW for submission
+│   ├── run_hw.sh       # Combined test + package
+│   ├── check_cluster.sh # Connectivity test for cluster nodes
+│   └── utils/          # Utility scripts
+├── templates/           # Starter code/config templates
+│   ├── CMakeLists.txt.template
+│   ├── template.c.template
+│   └── template.cu.template
+└── docs/               # Additional documentation, notes
+    └── HPC-tips.md    # HPC debugging & performance tips
 ```
 
----
+## 5. Current Implementation Status
+### Homeworks
+- **HW1 (MPI Point-to-Point Matrix Multiplication):** Completed, tested with local cluster or oversubscribing ranks. Verified partial speedups and correctness for matrix multiplication with 1–8 processes.
+- **HW2 (MPI Collective Communication):** In progress, focusing on scatter/gather and reduce operations for advanced HPC patterns.
+- **HW3+** (Not all enumerated here)...
 
-## How to Build & Test
+### Final Project: AlexNet Inference
+- **Design:** Data-parallel approach (each MPI rank holds a copy of the model weights, processes a slice of input data).
+- **Layers Implemented:**
+  1. **Conv1 → ReLU1 → Pool1**
+  2. **Conv2 → ReLU2 → Pool2 → LRN2**
+- **Naive Kernels:** Basic convolution, max-pooling, and LRN. Next steps include adding more layers and eventually fully connected + softmax.
+- **Testing Scripts:** We have an extended script that runs the final project with different process counts and synthetic data multipliers, verifying correctness and capturing kernel timing.
 
-### Building the Project
+## 6. Development Workflow
+1. **Clone & Setup:**
+   ```bash
+   git clone <repo-url>
+   cd <repo-folder>
+   # optional: if using WSL2
+   sudo apt update && sudo apt install build-essential openmpi-bin libopenmpi-dev
+   ```
 
-Navigate to the `final_project` directory:
+2. **Scaffold a Homework:**
+   ```bash
+   bash scripts/scaffold_hw.sh 4  # Creates homeworks/hw4 with skeleton
+   ```
 
+3. **Implement / Update Code:**
+   - For homework: Edit in `homeworks/hwX/src/template.cu` or `.c`
+   - For final project: Edit in `final_project/src/`
+
+4. **Test Locally:**
+   ```bash
+   bash scripts/test_hw.sh X
+   # or for final project:
+   cd final_project
+   make clean && make
+   mpirun --oversubscribe -np 2 ./template
+   ```
+
+5. **Package for Submission:**
+   ```bash
+   bash scripts/package_hw.sh X LastName FirstName
+   ```
+
+## 7. Automation Scripts
+- `scaffold_hw.sh <hw_num>`: Creates homework structure with templates
+- `test_hw.sh <hw_num>`: Builds and tests homework
+- `package_hw.sh <hw_num> <last> <first>`: Packages for submission
+- `run_hw.sh <hw_num> <last> <first>`: Combines test and package
+- Final project scripts in `final_project/scripts/` handle testing and results analysis
+
+## 8. Build & Test Instructions
+### Single Homework
+```bash
+bash scripts/test_hw.sh 2
+bash scripts/package_hw.sh 2 Doe John
+```
+
+### Final Project
 ```bash
 cd final_project
-make
-```
-
-This will compile both the main executable (`template`) and convolution test executable (`conv_test`).
-
-### Running Automated Tests
-
-Execute the automated test script from within `final_project`:
-
-```bash
+make clean && make
 bash scripts/test_final.sh
-```
-
-This runs a series of MPI-based tests with varying ranks and dataset multipliers, verifying correct MPI communication, CUDA kernel correctness, and timing performance.
-
-### Summarizing Test Results
-
-To summarize testing results into an easily readable format, run:
-
-```bash
 bash scripts/summarize_results.sh
 ```
 
----
+## 9. Submission Guidelines
+- Submit as `hw<num>-lastname-firstname.tgz`
+- Include only `template.c/cu` and `Makefile`
+- Must compile on Fedora 37 with GCC 12 and CUDA 12.x
+- No late submissions accepted
 
-## Development Environment
+## 10. Troubleshooting
+Common issues:
+- Makefile TAB vs. Spaces
+- MPI header not found
+- CUDA compiler errors
+- Timeouts in test scripts
+- Linker errors
 
-Recommended to use WSL2 with Ubuntu for initial development and testing. Final validation must be on Fedora 37 with GCC 12 and CUDA 12.x.
+## 11. Future Directions
+- Expanded AlexNet layers
+- Model parallelism
+- Performance optimization
+- Distributed training
+- Advanced profiling integration
 
-Install necessary tools:
-
-```bash
-sudo apt update
-sudo apt install build-essential cmake git openmpi-bin libopenmpi-dev cuda-toolkit-12-4
-```
-
-Ensure your CUDA and MPI installations are correctly configured.
-
----
-
-## AI Assistance Usage
-
-AI tools have been extensively used for:
-- Generating clear, detailed documentation and code comments
-- Assisting in debugging and resolving CUDA and MPI errors
-- Automating summaries of testing and implementation steps
-- Enhancing learning by generating conceptual explanations
-
----
-
-## Troubleshooting
-
-Common troubleshooting steps:
-- Ensure environment variables (`PATH`, `LD_LIBRARY_PATH`) are correctly set.
-- Verify MPI functionality (`mpirun --version`, `mpirun -np 2 hostname`).
-- Confirm CUDA installation (`nvcc --version`, `nvidia-smi`).
-- Regularly pull updates and check repository status with `git status`.
-
----
-
-## Future Directions
-
-- Implement optimized CUDA kernels leveraging shared memory and tiling.
-- Add further AlexNet layers (fully connected, softmax classification).
-- Extend automated scripts to handle dynamic MPI rank discovery and GPU load balancing.
-
----
-
-## Final Notes
-
-Please ensure thorough testing on Fedora 37 prior to submission. Consistent documentation and robust automation scripts are critical for reproducibility and grading clarity.
-
+## 12. References & Resources
+- MPI Forum: mpi-forum.org
+- NVIDIA CUDA Docs: docs.nvidia.com/cuda/
+- PMPP Book (4th Ed.)
+- HPC Community Channels
