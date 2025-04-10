@@ -1,21 +1,33 @@
+/*
+ * Basic MPI + CUDA Template (for HW 4+)
+ * CS485 GPU cluster programming
+ * Spring 2025
+ *
+ * Note: Often written as C++, but can be adapted for C + CUDA runtime API.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
 #include <cuda_runtime.h>
 #include <time.h> // For timing
 
-// Macro for checking CUDA errors
+// --- Utility Macros ---
+// Macro for checking CUDA errors (Essential!)
 #define CUDA_CHECK(call) do { \
     cudaError_t err = call; \
     if (err != cudaSuccess) { \
-        fprintf(stderr, "CUDA Error in %s at line %d: %s\n", __FILE__, __LINE__, cudaGetErrorString(err)); \
+        fprintf(stderr, "CUDA Error in %s at line %d: %s (%d)\n", \
+                __FILE__, __LINE__, cudaGetErrorString(err), err); \
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE); \
     } \
 } while (0)
 
-// Forward declaration for a potential GPU kernel
+// --- Kernel Definitions ---
+// Forward declaration or include separate .cuh file
 // __global__ void myKernel(/* parameters */);
 
+
+// --- Main Function ---
 int main(int argc, char *argv[]) {
     int rank, size;
     int device_id = 0; // Default GPU device ID
@@ -27,26 +39,28 @@ int main(int argc, char *argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    // --- GPU Selection (Simple Example: Round-robin or assign based on rank) ---
+    // --- GPU Selection & Verification ---
     int num_devices = 0;
     CUDA_CHECK(cudaGetDeviceCount(&num_devices));
     if (num_devices == 0) {
-        fprintf(stderr, "Rank %d: No CUDA-capable devices found.\n", rank);
+        fprintf(stderr, "[Rank %d] No CUDA-capable devices found. Aborting.\n", rank);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
-    // Assign device based on local rank if using MPI shared memory, or just rank % num_devices
-    device_id = rank % num_devices; // Simple assignment, might need refinement
+    // Simple device assignment (can be more sophisticated)
+    device_id = rank % num_devices;
     CUDA_CHECK(cudaSetDevice(device_id));
 
     cudaDeviceProp deviceProp;
     CUDA_CHECK(cudaGetDeviceProperties(&deviceProp, device_id));
-    printf("Rank %d using GPU device %d: %s\n", rank, device_id, deviceProp.name);
+    if (rank == 0) { // Print device info once per node (ideally handle shared memory nodes better)
+         printf("[Rank %d using GPU %d] %s | Compute Capability: %d.%d | Total Global Mem: %zu MB\n",
+                rank, device_id, deviceProp.name, deviceProp.major, deviceProp.minor,
+                deviceProp.totalGlobalMem / (1024 * 1024));
+    }
 
 
-    // --- Your Homework Logic Starts Here ---
-
-    // Example: Handle command line argument for problem size
-    int problem_size = 0;
+    // --- Argument Parsing ---
+    int problem_size = 0; // Example
     if (argc > 1) {
         problem_size = atoi(argv[1]);
         if (rank == 0) {
@@ -56,27 +70,55 @@ int main(int argc, char *argv[]) {
         if (rank == 0) {
             fprintf(stderr, "Usage: mpirun -np <num_procs> %s <problem_size>\n", argv[0]);
         }
-        MPI_Abort(MPI_COMM_WORLD, 1); // Exit if no size provided
+         MPI_Finalize();
+         return 1;
     }
 
+
+    // --- Your Homework Logic Starts Here ---
+
     // Example MPI + CUDA workflow outline:
-    // 1. Root process (rank 0) might read/generate initial data.
-    // 2. Distribute data using MPI (e.g., MPI_Scatter, MPI_Bcast).
-    // 3. Each rank allocates memory on its assigned GPU (cudaMalloc).
-    // 4. Copy data from host (CPU) to device (GPU) (cudaMemcpyHostToDevice).
-    // 5. Define kernel launch parameters (grid size, block size).
-    // 6. Launch kernel on the GPU (myKernel<<<...>>>).
-    // 7. Synchronize GPU execution if needed (cudaDeviceSynchronize).
-    // 8. Copy results from device (GPU) to host (CPU) (cudaMemcpyDeviceToHost).
-    // 9. Gather results using MPI (e.g., MPI_Gather, MPI_Reduce).
-    // 10. Root process might process/print final results.
-    // 11. Free GPU memory (cudaFree).
+    // 1. Root process (rank 0) reads/generates initial host data.
+    // 2. Determine data distribution (how much data per rank).
+    // 3. Distribute data from root to all ranks using MPI (e.g., MPI_Scatter, MPI_Bcast).
+    // 4. Each rank allocates memory on its assigned GPU (CUDA_CHECK(cudaMalloc(...))).
+    // 5. Copy relevant data portion from host buffer to device buffer (CUDA_CHECK(cudaMemcpy(..., cudaMemcpyHostToDevice))).
+    // 6. Define kernel launch parameters (gridDim, blockDim).
+    // 7. Launch the kernel(s) on the GPU (myKernel<<<gridDim, blockDim>>>(...)). CUDA_CHECK(cudaGetLastError());
+    // 8. Synchronize device if necessary before copying results back (CUDA_CHECK(cudaDeviceSynchronize())).
+    // 9. Copy results from device buffer to host buffer (CUDA_CHECK(cudaMemcpy(..., cudaMemcpyDeviceToHost))).
+    // 10. Gather results from all ranks to the root process using MPI (e.g., MPI_Gather, MPI_Reduce).
+    // 11. Root process might perform final verification or output.
+    // 12. Free GPU memory (CUDA_CHECK(cudaFree(...))).
+    // 13. Free host memory.
 
 
     // --- Your Homework Logic Ends Here ---
 
+
     // Finalize the MPI environment.
     MPI_Finalize();
 
-    return 0;
+    // Optional: Reset device context if needed
+    // CUDA_CHECK(cudaDeviceReset());
+
+    return 0; // Indicate success
 }
+
+
+// --- Helper Function Definitions ---
+/* Add your host helper functions here */
+
+/* Example Kernel Implementation:
+__global__ void myKernel(float *input, float *output, int size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        // Do some computation
+        output[idx] = input[idx] * 2.0f;
+    }
+}
+*/
+
+/*
+End of file
+*/

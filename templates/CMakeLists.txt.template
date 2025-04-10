@@ -1,83 +1,89 @@
+# CMake build file template for MPI+CUDA assignments (HW4+)
+# This is used by test_hw.sh for local development/testing.
+# The simpler Makefile in the homework root is used for submission packaging.
+
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR) # MPI/CUDA needs relatively recent CMake
 
+# Project definition - enabling C, C++, and CUDA languages
 project(HomeworkProject LANGUAGES C CXX CUDA)
 
 message(STATUS "Project Name: ${PROJECT_NAME}")
-message(STATUS "Source Directory: ${CMAKE_CURRENT_SOURCE_DIR}")
-message(STATUS "Binary Directory: ${CMAKE_CURRENT_BINARY_DIR}")
+message(STATUS "Source Directory: ${CMAKE_CURRENT_SOURCE_DIR}") # Should be homeworks/hwX
+message(STATUS "Binary Directory: ${CMAKE_CURRENT_BINARY_DIR}") # Should be homeworks/hwX/build
 
 # --- Find Required Packages ---
-# Find MPI (adjust components if using Fortran)
-find_package(MPI REQUIRED COMPONENTS C CXX) # Find C and C++ bindings
+
+# Find MPI (requesting C and CXX components)
+find_package(MPI REQUIRED COMPONENTS C CXX)
 message(STATUS "MPI Found: ${MPI_FOUND}")
 if(MPI_FOUND)
     message(STATUS "MPI C Compiler: ${MPI_C_COMPILER}")
     message(STATUS "MPI CXX Compiler: ${MPI_CXX_COMPILER}")
-    message(STATUS "MPI Include Paths: ${MPI_C_INCLUDE_DIRS}")
-    message(STATUS "MPI Link Libraries: ${MPI_C_LIBRARIES}")
 endif()
 
-# Find CUDA
-# Set standard required version (can be specific like 12.2)
-set(CMAKE_CUDA_STANDARD 11) # Or 14, 17 depending on your code
-set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-set(CMAKE_CUDA_EXTENSIONS OFF) # Prefer standard CUDA
+# Find CUDA Toolkit
+# Set minimum C++ standard required by CUDA code if applicable
+# set(CMAKE_CUDA_STANDARD 11) # Or 14, 17
+# set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+# set(CMAKE_CUDA_EXTENSIONS OFF) # Prefer standard CUDA
 
-# Select compute architectures (adjust for your GPUs - 3090 is Ampere ~sm_86, check Quadro)
-# Set a reasonable minimum, and the specific ones you have
-# Example: sm_75 (Turing), sm_86 (Ampere)
-set(CMAKE_CUDA_ARCHITECTURES "75;86" CACHE STRING "CUDA architectures")
-#find_package(CUDA REQUIRED) # Basic find
-find_package(CUDAToolkit REQUIRED) # More modern approach
-message(STATUS "CUDA Found: ${CUDAToolkit_FOUND}")
+# Select target compute architectures (Virtual AND Real recommended)
+# Example: sm_75 (Turing), sm_86 (Ampere for 3090). Adjust based on your target hardware.
+# Consult NVIDIA docs or deviceQuery for capabilities.
+# Providing multiple ensures broader compatibility if needed.
+set(CMAKE_CUDA_ARCHITECTURES "75;86" CACHE STRING "CUDA architectures (e.g., 75;86)")
+message(STATUS "Targeting CUDA Architectures: ${CMAKE_CUDA_ARCHITECTURES}")
+
+# Use the modern FindCUDAToolkit module
+find_package(CUDAToolkit REQUIRED)
+message(STATUS "CUDA Toolkit Found: ${CUDAToolkit_FOUND}")
 if(CUDAToolkit_FOUND)
     message(STATUS "CUDA Toolkit Include Dirs: ${CUDAToolkit_INCLUDE_DIRS}")
     message(STATUS "CUDA Libraries: ${CUDAToolkit_LIBRARIES}") # Usually cudart
 endif()
 
-
 # --- Add Executable ---
-# Glob source files (simple approach, explicit listing is safer for large projects)
-# Assumes source code is in a 'src' subdirectory relative to this CMakeLists.txt
+# Assume source code is in a 'src' subdirectory relative to this CMakeLists.txt
+# Glob files (simple approach) or list them explicitly
 file(GLOB SOURCES "src/*.c" "src/*.cpp" "src/*.cu")
 
 if(NOT SOURCES)
-    message(FATAL_ERROR "No source files found in src/ directory!")
+    message(FATAL_ERROR "No source files found in 'src/' directory relative to $(pwd)!")
 endif()
-
 message(STATUS "Source files: ${SOURCES}")
 
-# Executable name MUST be 'template'
+# Executable name MUST be 'template' to match course requirements
 add_executable(template ${SOURCES})
 
 # --- Link Libraries ---
-# Link MPI libraries using imported targets (preferred)
-# Use MPI::MPI_C or MPI::MPI_CXX depending on main source language
+# Link MPI libraries using imported targets (preferred modern approach)
+# Link both C and CXX libraries found by find_package(MPI)
 target_link_libraries(template PRIVATE MPI::MPI_C MPI::MPI_CXX)
+message(STATUS "Linking MPI libraries...")
 
-# Link CUDA libraries if CUDA language is enabled
-if(CMAKE_CUDA_COMPILER)
-    target_link_libraries(template PRIVATE CUDA::cudart) # Link basic CUDA runtime
-    # Add other CUDA libs if needed: CUDA::cublas, CUDA:: cufft, etc.
-    message(STATUS "Linking CUDA libraries")
-endif()
+# Link CUDA runtime library (cudart) - Essential for most CUDA apps
+# Add other CUDA libs if needed: CUDA::cublas, CUDA::cufft, etc.
+target_link_libraries(template PRIVATE CUDA::cudart)
+message(STATUS "Linking CUDA runtime library...")
 
-# Link math library if needed
+# Link math library (libm) if needed (e.g., for sqrt, sin, etc.)
 target_link_libraries(template PRIVATE m)
+message(STATUS "Linking math library...")
 
-# --- Set Properties (Optional) ---
-# Set C/C++ standard if needed
-set_target_properties(template PROPERTIES
-    C_STANDARD 11
-    CXX_STANDARD 11 # Or 14, 17
-    CUDA_STANDARD 11 # Or 14, 17
-)
+# --- Set Properties (Optional but Recommended) ---
+# Set C/C++/CUDA standard if needed/desired
+# set_target_properties(template PROPERTIES
+#     C_STANDARD 11
+#     CXX_STANDARD 17
+#     CUDA_STANDARD 17
+# )
 
-# Enable specific compiler flags if needed
+# Add common compiler flags (warnings, optimization)
+# Use generator expressions to apply flags based on language
 target_compile_options(template PRIVATE
-    $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra>
-    $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>
-    # Add CUDA specific flags if needed, e.g., -Xcompiler="-Wall"
+    $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -O2>
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra -O2>
+    # $<$<COMPILE_LANGUAGE:CUDA>:-Wall -Wextra> # Apply warnings via NVCC host compiler if desired
 )
 
-message(STATUS "CMake configuration finished for ${PROJECT_NAME}")
+message(STATUS "CMake configuration finished for target 'template'")

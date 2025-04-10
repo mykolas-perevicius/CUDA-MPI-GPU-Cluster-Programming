@@ -1,3 +1,8 @@
 {
-    "cmake.sourceDirectory": "/home/myko/CS485/CUDA-MPI-GPU-Cluster-Programming/assignments/hw1"
+    "files.associations": {
+        "*.rmd": "markdown",
+        "*.css": "tailwindcss",
+        "stdio.h": "c",
+        "stdlib.h": "c"
+    }
 }
