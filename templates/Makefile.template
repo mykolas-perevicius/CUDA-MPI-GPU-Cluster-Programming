@@ -1,0 +1,73 @@
+# Basic Makefile for MPI (and potentially simple CUDA) - REQUIRED FOR SUBMISSION
+# Adjust CC/NVCC/CFLAGS/LDFLAGS/LIBS as needed per assignment
+
+# Default is MPI C compilation
+CC = mpicc
+NVCC = nvcc
+CXX = mpiCC # For C++ MPI
+
+# Common flags (adjust -std as needed)
+CFLAGS = -Wall -Wextra -std=c11 -O2
+CXXFLAGS = -Wall -Wextra -std=c++11 -O2
+NVCCFLAGS = -O2 -arch=sm_75 # IMPORTANT: Set appropriate compute capability for your target GPUs
+
+# Libraries
+LDFLAGS = -lm # Link math library by default
+CUDA_LIBS = -lcudart # Basic CUDA runtime
+
+# Executable name MUST be 'template' for submission
+EXE = template
+
+# --- Determine source file type ---
+# Simple check for .cu extension (adjust if using .cpp)
+SRC_CU := $(wildcard src/*.cu)
+SRC_C := $(wildcard src/*.c)
+SRC_CPP := $(wildcard src/*.cpp)
+
+# --- Build Rules ---
+ifeq ($(SRC_CU),)
+    # --- MPI C/C++ Build ---
+    ifeq ($(SRC_CPP),)
+        # C Build
+        SRC = $(SRC_C)
+        COMPILER = $(CC)
+        FLAGS = $(CFLAGS)
+    else
+        # C++ Build
+        SRC = $(SRC_CPP)
+        COMPILER = $(CXX)
+        FLAGS = $(CXXFLAGS)
+    endif
+
+    all: $(EXE)
+
+    $(EXE): $(SRC)
+    	$(COMPILER) $(FLAGS) $^ -o $@ $(LDFLAGS)
+
+else
+    # --- MPI + CUDA Build ---
+    # Assumes MPI calls might be in .cu or linked C/C++ files if structure is complex
+    # This Makefile might need significant adjustment for complex MPI+CUDA builds.
+    # CMake is often preferred for development in such cases.
+    # THIS IS A BASIC EXAMPLE FOR SUBMISSION PURPOSES if prof requires Makefile for CUDA too.
+    SRC = $(SRC_CU)
+    OBJS = $(patsubst src/%.cu, build/%.o, $(SRC))
+
+    all: $(EXE)
+
+    # Ensure build directory exists
+    $(shell mkdir -p build)
+
+    build/%.o: src/%.cu
+    	$(NVCC) $(NVCCFLAGS) -dc $< -o $@ # Compile object file
+
+    $(EXE): $(OBJS)
+    	# Use mpicc/mpiCC as the linker to automatically bring in MPI libs
+    	# Note: Linking CUDA objects with mpicc might require explicitly adding CUDA libs/paths sometimes.
+    	$(CC) $(FLAGS) $^ -o $@ $(LDFLAGS) $(CUDA_LIBS) -L$(CUDA_HOME)/lib64 # Adjust CUDA path if needed
+
+endif
+
+
+clean:
+	rm -rf $(EXE) build/ *.o *.tgz

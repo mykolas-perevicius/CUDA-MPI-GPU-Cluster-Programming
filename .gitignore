@@ -1,0 +1,20 @@
+# Build artifacts
+build/
+*.o
+*.exe
+template
+
+# Packaged homework
+*.tgz
+
+# Configuration files
+config/cluster.conf
+
+# IDE specific files
+.vscode/*
+!.vscode/settings.json
+.idea/
+
+# OS specific files
+.DS_Store
+Thumbs.db

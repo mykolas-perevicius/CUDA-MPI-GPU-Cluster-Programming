@@ -1,3 +1,10 @@
+/*
+ * Homework 7 - Sample Template
+ * This file is a placeholder source file for Homework 7.
+ *
+ * Replace this code with your implementation.
+ */
+
 #include <mpi.h>
 #include <stdio.h>
 
@@ -14,7 +21,7 @@ int main(int argc, char** argv) {
     int name_len;
     MPI_Get_processor_name(processor_name, &name_len);
     
-    printf("Hello from processor %s, rank %d out of %d processors\n",
+    printf("Homework 7: Hello from processor %s, rank %d out of %d processors\n",
            processor_name, world_rank, world_size);
     
     MPI_Finalize();
