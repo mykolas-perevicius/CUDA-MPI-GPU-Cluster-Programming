@@ -1,62 +1,44 @@
-// final_project/include/layers.hpp
 #ifndef LAYERS_HPP
 #define LAYERS_HPP
 
-#include <cuda_runtime.h>
+#include <vector> // Use vectors for simplicity, or raw pointers if preferred
 
-// --- Layer Parameter Structures ---
-struct ConvLayerParams {
-    int inputChannels;
-    int outputChannels;
-    int kernelSize;  // Assumes square kernels (R = S)
-    int stride;
-    int padding;
-    int inputHeight;
-    int inputWidth;
-    int outputHeight;
-    int outputWidth;
-};
+// --- Serial Layer Function Prototypes ---
 
-struct PoolLayerParams {
-    int poolSize;    // e.g., 3
-    int stride;      // e.g., 2
-    int inputChannels;
-    int inputHeight;
-    int inputWidth;
-    int outputHeight;
-    int outputWidth;
-};
+// Naive Serial Convolution Layer
+void serialConvLayer(
+    std::vector<float>& output,
+    const std::vector<float>& input,
+    const std::vector<float>& weights,
+    const std::vector<float>& biases, // Added biases
+    int H, int W, int C, // Input dimensions (Height, Width, Channels)
+    int K, // Number of filters (Output channels)
+    int F, // Filter size (FxF)
+    int S, // Stride
+    int P  // Padding
+);
 
-struct LRNLayerParams {
-    int channels;    // Number of feature map channels
-    int height;
-    int width;
-    int localSize;   // Typically 5 in AlexNet
-    float alpha;     // Typically 1e-4
-    float beta;      // Typically 0.75
-    float k;         // Typically 2.0
-};
+// Serial ReLU Activation Layer (in-place or out-of-place)
+void serialReluLayer(std::vector<float>& data); // Example: In-place
 
-// --- Existing Launchers for Block1 (Conv1->ReLU->Pool1) ---
-// (Assumed to be implemented elsewhere)
+// Serial Max Pooling Layer
+void serialMaxPoolLayer(
+    std::vector<float>& output,
+    const std::vector<float>& input,
+    int H, int W, int C, // Input dimensions
+    int F, // Filter size (pooling window size)
+    int S  // Stride
+);
 
-// --- New Declarations for Block2: Conv2 -> ReLU2 -> Pool2 -> LRN2 ---
-void launch_conv2d_forward_conv2(
-    const float* d_input, float* d_output,
-    const float* d_weights, const float* d_biases,
-    const ConvLayerParams& params,
-// CUDA? // CUDA?     cudaStream_t stream = 0);
-
-// CUDA? // CUDA? void launch_relu_forward_conv2(float* d_data, int N, cudaStream_t stream = 0);
-
-void launch_maxpool_forward2(
-    const float* d_input, float* d_output,
-    const PoolLayerParams& params,
-// CUDA? // CUDA?     cudaStream_t stream = 0);
-
-void launch_lrn_forward(
-    const float* d_input, float* d_output,
-    const LRNLayerParams& params,
-// CUDA? // CUDA?     cudaStream_t stream = 0);
+// Serial Local Response Normalization (LRN) Layer
+void serialLRNLayer(
+    std::vector<float>& output,
+    const std::vector<float>& input,
+    int H, int W, int C, // Input dimensions
+    int N,        // Size of the normalization window (across channels)
+    float alpha,  // LRN parameter
+    float beta,   // LRN parameter
+    float k       // LRN parameter
+);
 
 #endif // LAYERS_HPP
