@@ -1,180 +1,227 @@
 # CS485: GPU Cluster Programming (MPI+CUDA) – Project Workspace
+# CS485: GPU Cluster Programming (MPI+CUDA) – Final Project: AlexNet Inference
 
-This repository is the central hub for our CS485 GPU Cluster Programming course at NJIT. It includes homework assignments, final project code (an evolving AlexNet inference implementation), automation scripts, and additional resources. Everything is designed to streamline the development, testing, and submission workflows for MPI and CUDA programs running on Fedora 37 with GCC 12 and CUDA Toolkit 12.x.
+This directory contains the code, documentation, and resources for the final project of the CS485 GPU Cluster Programming course: an evolving MPI+CUDA implementation of AlexNet inference. The project follows a staged development approach, progressing from serial execution to advanced hybrid parallelism.
 
 ## Table of Contents
-1. [Course Overview](#course-overview)
-2. [Project Objectives](#project-objectives)
-3. [Key Technologies & Environment](#key-technologies--environment)
-4. [Repository Structure](#repository-structure)
-5. [Current Implementation Status](#current-implementation-status)
-6. [Development Workflow](#development-workflow)
-7. [Automation Scripts](#automation-scripts)
-8. [Build & Test Instructions](#build--test-instructions)
-9. [Submission Guidelines](#submission-guidelines)
-10. [Troubleshooting](#troubleshooting)
-11. [Future Directions](#future-directions)
-12. [References & Resources](#references--resources)
+1.  [Project Overview](#1-project-overview)
+2.  [Target Environment](#2-target-environment)
+3.  [Repository Structure (This Directory)](#3-repository-structure-this-directory)
+4.  [Project Version Implementation Plan](#4-project-version-implementation-plan)
+    *   [Version 1: Serial CPU](#version-1-serial-cpu)
+    *   [Version 2: MPI Only (CPU)](#version-2-mpi-only-cpu)
+    *   [Version 3: CUDA Only (Single GPU)](#version-3-cuda-only-single-gpu)
+    *   [Version 4: MPI + CUDA (Hybrid)](#version-4-mpi--cuda-hybrid)
+    *   [Version 5: CUDA-Aware MPI (Optional Optimization)](#version-5-cuda-aware-mpi-optional-optimization)
+5.  [Key Technologies](#5-key-technologies)
+6.  [Current Implementation Status](#6-current-implementation-status)
+7.  [Development Workflow for Versions](#7-development-workflow-for-versions)
+8.  [Build & Test Instructions per Version](#8-build--test-instructions-per-version)
+9.  [Troubleshooting](#9-troubleshooting)
+10. [Future Directions](#10-future-directions)
+11. [References & Resources](#11-references--resources)
 
-## 1. Course Overview
-**Course:** CS485 – Selected Topics: GPU Cluster Programming (MPI+CUDA)  
-**Instructor:** Andrew Sohn, NJIT  
-**Topics:** 
-- High-performance computing (HPC) fundamentals
-- Parallel architectures (MIMD, SIMD, SPMD)
-- MPI for distributed memory systems (Point-to-Point, Collective, One-Sided)
-- CUDA for GPU acceleration (architecture, memory management, kernel optimization)
-- Data-parallel approaches on a GPU cluster (MPI + CUDA)
-- Real-world HPC workflows, debugging, and performance tuning
+## 1. Project Overview
+This project implements inference for the initial blocks of the AlexNet convolutional neural network. The goal is to explore different parallel programming paradigms (MPI, CUDA, MPI+CUDA) and evaluate their performance on a GPU cluster. The implementation follows a structured, incremental approach across five distinct versions.
 
-**Required Grading Environment:** 
-- **OS:** Fedora 37  
-- **Compilers:** GCC 12  
-- **GPU Toolkit:** CUDA 12.x  
+**Core Task:** Implement AlexNet inference, starting with:
+  *   Block 1: Conv1 → ReLU1 → Pool1
+  *   Block 2: Conv2 → ReLU2 → Pool2 → LRN2
 
-All final submissions must compile and run under this environment, using an automated grading script.
+**Parallelization Strategy (V4/V5):** Primarily data parallelism, where input data batches are distributed across MPI ranks, each rank utilizing its assigned GPU(s) for computation. Model weights are typically broadcast from rank 0.
 
-**Relevant Links:**
-- [Course Webpage](http://web.njit.edu/~sohna/cs485)
-- [MPI v3.1 Standard](https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report.pdf)
-- [Programming Massively Parallel Processors (4th Ed.)](https://www.elsevier.com/books/programming-massively-parallel-processors-a-hands-on-approach/kirk/978-0-323-91231-0)
+## 2. Target Environment
+Code must ultimately compile and run correctly under the course's specified environment:
+- **OS:** Fedora 37
+- **Compilers:** GCC 12 (for host code), `mpicc`/`mpicxx` (MPI wrappers), `nvcc` (CUDA compiler)
+- **GPU Toolkit:** CUDA 12.x
+- **MPI:** Open MPI (ideally compiled with CUDA-awareness for V5)
 
-## 2. Project Objectives
-1. **Complete Homework Assignments:** Tackle progressive homework tasks (MPI basics, CUDA kernels, advanced MPI+CUDA), ensuring correctness and performance.
-2. **Develop a Final Project:** An AlexNet-based inference engine that demonstrates multi-GPU parallelism using MPI+CUDA, achieving tangible speedup over single-GPU or single-node baselines.
-3. **Automate Everything:** Provide scripts for scaffolding, building, testing, and packaging to ensure reproducible results and consistency with the grading environment.
-4. **Maintain Clear Documentation:** Keep each component thoroughly documented (comments, readmes, script usage guides).
-5. **Use AI Assistance for Learning:** Leverage AI chat for code summaries, potential exam questions, debugging, and deeper HPC insights.
+Local development is done in WSL2 (Ubuntu) with compatible toolchains, but final testing should target the Fedora environment.
 
-## 3. Key Technologies & Environment
-- **MPI (Open MPI)**: For distributing computation across multiple Linux nodes or multiple ranks on one node. Key functions include `MPI_Init`, `MPI_Bcast`, `MPI_Allreduce`, etc.
-- **CUDA (NVIDIA)**: For GPU kernel development, memory transfers, and HPC acceleration. Key toolkit components include `nvcc`, `cudaMemcpy`, `cudaEvent`, and advanced libraries (cuBLAS/cuDNN).
-- **Fedora 37** with **GCC 12** and **CUDA 12.x**: Mandatory environment for final grading. We simulate or partially test this environment locally (WSL2 with Ubuntu + custom GCC 12 + CUDA 12.x).
-- **Bash & Make**: For automation and build workflows. Some homeworks also generate CMake files for local convenience.
-- **AI Tools**: Used for generating code explanations, debugging hints, and thorough documentation.
+## 3. Repository Structure (This Directory)
 
-## 4. Repository Structure
 ```
-.
-├── README.md                # This readme
-├── homeworks/              # Homework assignments
-│   └── hwX/
-│       ├── src/           # Source code (template.c/.cu)
-│       ├── Makefile       # Generated makefile for submission
-│       ├── CMakeLists.txt # For local dev (HW4+)
-│       ├── build/         # Local build folder (ignored in submission)
-│       └── summary.md     # Summaries, notes, potential exam Qs
-├── final_project/         # Final project: AlexNet MPI+CUDA
-│   ├── include/          # Headers (layers.hpp, alexnet.hpp, etc.)
-│   ├── src/             # Source (main.cpp, alexnet_hybrid.cu, layers.cu)
-│   ├── Makefile         # Build instructions (produces 'template', etc.)
-│   └── scripts/         # Additional scripts (test_final.sh, etc.)
-├── scripts/              # Global automation scripts
-│   ├── scaffold_hw.sh   # Creates new homework structure
-│   ├── test_hw.sh      # Builds/tests HW with local run
-│   ├── package_hw.sh   # Packages HW for submission
-│   ├── run_hw.sh       # Combined test + package
-│   ├── check_cluster.sh # Connectivity test for cluster nodes
-│   └── utils/          # Utility scripts
-├── templates/           # Starter code/config templates
-│   ├── CMakeLists.txt.template
-│   ├── template.c.template
-│   └── template.cu.template
-└── docs/               # Additional documentation, notes
-    └── HPC-tips.md    # HPC debugging & performance tips
+final_project/
+├── v1_serial/ # Version 1: Serial CPU implementation
+│ ├── include/ # Headers specific to V1 (modified from base)
+│ ├── src/ # Source code specific to V1 (modified from base)
+│ └── Makefile # Makefile for V1 (using g++)
+├── v2_mpi_only/ # Version 2: MPI-only (CPU cores) implementation
+│ ├── include/ # Headers specific to V2
+│ ├── src/ # Source code specific to V2
+│ └── Makefile # Makefile for V2 (using mpicxx)
+├── v3_cuda_only/ # Version 3: CUDA-only (single GPU) implementation
+│ ├── include/ # Headers specific to V3
+│ ├── src/ # Source code specific to V3
+│ └── Makefile # Makefile for V3 (using nvcc)
+├── v4_mpi_cuda/ # Version 4: Baseline MPI + CUDA implementation
+│ ├── include/ # Headers for V4 (restored from backup)
+│ ├── src/ # Source code for V4 (restored from backup)
+│ └── Makefile # Makefile for V4 (using nvcc -ccbin=mpicxx)
+├── v5_cuda_aware_mpi/ # Version 5: Optional CUDA-aware MPI optimization
+│ ├── include/ # Headers for V5 (likely same as V4)
+│ ├── src/ # Source code for V5 (modified V4 for direct GPU pointers in MPI)
+│ └── Makefile # Makefile for V5 (likely same as V4)
+├── data/ # SHARED: Input data, model weights, etc. (Accessed via ../data/)
+├── docs/ # SHARED: Project documentation, design notes (Accessed via ../docs/)
+├── logs/ # Basic run logs (gitignored)
+├── logs_extended/ # Detailed performance logs (gitignored)
+├── original_backup_*/ # Backup of initial V4/V5 state (gitignored)
+├── Makefile.original_v4_v5 # Reference Makefile for V4/V5 base
+└── README.md # This file
 ```
 
-## 5. Current Implementation Status
-### Homeworks
-- **HW1 (MPI Point-to-Point Matrix Multiplication):** Completed, tested with local cluster or oversubscribing ranks. Verified partial speedups and correctness for matrix multiplication with 1–8 processes.
-- **HW2 (MPI Collective Communication):** In progress, focusing on scatter/gather and reduce operations for advanced HPC patterns.
-- **HW3+** (Not all enumerated here)...
+**Note:** Shared resources (`data/`, `docs/`) are accessed from within versioned source code using relative paths (e.g., `../data/imagenet.batch`).
 
-### Final Project: AlexNet Inference
-- **Design:** Data-parallel approach (each MPI rank holds a copy of the model weights, processes a slice of input data).
-- **Layers Implemented:**
-  1. **Conv1 → ReLU1 → Pool1**
-  2. **Conv2 → ReLU2 → Pool2 → LRN2**
-- **Naive Kernels:** Basic convolution, max-pooling, and LRN. Next steps include adding more layers and eventually fully connected + softmax.
-- **Testing Scripts:** We have an extended script that runs the final project with different process counts and synthetic data multipliers, verifying correctness and capturing kernel timing.
+## 4. Project Version Implementation Plan
 
-## 6. Development Workflow
-1. **Clone & Setup:**
-   ```bash
-   git clone <repo-url>
-   cd <repo-folder>
-   # optional: if using WSL2
-   sudo apt update && sudo apt install build-essential openmpi-bin libopenmpi-dev
-   ```
+The project progresses through five versions. Initial setup (via `enhance_scaffold_all_versions.sh`) populates V1-V3 with code from V4/V5 and attempts basic automated commenting/renaming. **Significant manual effort is required for each version.**
 
-2. **Scaffold a Homework:**
-   ```bash
-   bash scripts/scaffold_hw.sh 4  # Creates homeworks/hw4 with skeleton
-   ```
+**General Manual Steps:**
+1.  Navigate to the target version directory (`cd final_project/vX_suffix`).
+2.  Carefully review code in `src/` and `include/`, especially lines commented with `// MPI?` or `// CUDA?`. Delete/modify as needed.
+3.  Implement the core logic required for the version (e.g., serial CPU replacements for CUDA kernels).
+4.  Clean up includes and header file prototypes.
+5.  Verify/update the `Makefile`, **critically updating the `SRCS` list** (for V1-V3) to match final source file names.
+6.  Ensure all paths accessing shared resources use the correct relative path (e.g., `../data/`).
 
-3. **Implement / Update Code:**
-   - For homework: Edit in `homeworks/hwX/src/template.cu` or `.c`
-   - For final project: Edit in `final_project/src/`
+---
+### Version 1: Serial CPU
+*   **Directory:** `final_project/v1_serial/`
+*   **Goal:** Correct, purely sequential AlexNet inference on a single CPU core. Establish functional baseline.
+*   **Manual Actions:**
+    *   **Remove MPI:** Delete `MPI_` calls, includes.
+    *   **Remove CUDA:** Delete kernel calls, memory management (`cudaMalloc`, `cudaMemcpy`, etc.), CUDA types/includes (`__global__`, `cudaStream_t`, `cuda_runtime.h`).
+    *   **Implement Serial Logic:** Replace *all* CUDA kernel functionality (Conv, ReLU, Pool, LRN) with standard C++ loops and calculations in the relevant `.cpp` files (rename `.cu` files to `.cpp` after removing CUDA code).
+    *   **Makefile:** Use `g++`. Update `SRCS` list with final `.cpp` filenames. Remove MPI/CUDA flags/libs.
+    *   **Paths:** Verify `../data/` access.
 
-4. **Test Locally:**
-   ```bash
-   bash scripts/test_hw.sh X
-   # or for final project:
-   cd final_project
-   make clean && make
-   mpirun --oversubscribe -np 2 ./template
-   ```
+---
+### Version 2: MPI Only (CPU)
+*   **Directory:** `final_project/v2_mpi_only/`
+*   **Goal:** Parallelize the serial logic across multiple CPU cores on potentially multiple nodes using MPI for data distribution.
+*   **Manual Actions:**
+    *   **Keep MPI:** Ensure `MPI_Init`, `MPI_Comm_*`, `MPI_Bcast`, `MPI_Allreduce` (or Scatter/Gather), `MPI_Finalize` are correctly used for data parallelism.
+    *   **Remove CUDA:** Delete kernel calls, CUDA memory management, types/includes.
+    *   **Implement Serial Logic per Rank:** Replace CUDA kernel functionality with standard C++ code that runs *within each MPI rank* on its assigned data slice. (Rename `.cu` files to `.cpp`).
+    *   **Makefile:** Use `mpicxx`. Update `SRCS` list with final `.cpp` filenames. Remove CUDA flags/libs.
+    *   **Paths:** Verify `../data/` access.
 
-5. **Package for Submission:**
-   ```bash
-   bash scripts/package_hw.sh X LastName FirstName
-   ```
+---
+### Version 3: CUDA Only (Single GPU)
+*   **Directory:** `final_project/v3_cuda_only/`
+*   **Goal:** Port the computationally intensive parts (layers) to run on a single GPU using CUDA.
+*   **Manual Actions:**
+    *   **Remove MPI:** Delete `MPI_` calls, includes. Program runs as a single process.
+    *   **Keep/Refine CUDA:** Ensure CUDA kernels, `cudaMalloc`, `cudaMemcpy`, `cudaEvent` or `cudaDeviceSynchronize` are correct for processing the *entire* dataset on one GPU. Keep relevant `.cu` files.
+    *   **Makefile:** Use `nvcc`. Update `SRCS_CU`/`SRCS_CPP` lists. Ensure correct `-gencode` flags for target GPU and link `-lcudart`. Remove MPI wrapper (`-ccbin`).
+    *   **Paths:** Verify `../data/` access.
 
-## 7. Automation Scripts
-- `scaffold_hw.sh <hw_num>`: Creates homework structure with templates
-- `test_hw.sh <hw_num>`: Builds and tests homework
-- `package_hw.sh <hw_num> <last> <first>`: Packages for submission
-- `run_hw.sh <hw_num> <last> <first>`: Combines test and package
-- Final project scripts in `final_project/scripts/` handle testing and results analysis
+---
+### Version 4: MPI + CUDA (Hybrid)
+*   **Directory:** `final_project/v4_mpi_cuda/`
+*   **Goal:** Combine MPI parallelism (inter-node) with CUDA parallelism (intra-node GPUs). This is the baseline hybrid version restored from backup.
+*   **Manual Actions:**
+    *   **Verify Code:** Ensure MPI calls correctly manage data distribution and synchronization around CUDA operations. Check host-device data transfers (`cudaMemcpy`) needed for communication.
+    *   **Verify Makefile:** Should use `nvcc -ccbin=mpicxx` (or equivalent MPI C++ wrapper). Check CUDA flags (`-gencode`) and linked libraries (`cudart`). Verify `SRCS_CU`/`SRCS_CPP` lists are correct.
+    *   **Paths:** Verify `../data/` access.
 
-## 8. Build & Test Instructions
-### Single Homework
-```bash
-bash scripts/test_hw.sh 2
-bash scripts/package_hw.sh 2 Doe John
-```
+---
+### Version 5: CUDA-Aware MPI (Optional Optimization)
+*   **Directory:** `final_project/v5_cuda_aware_mpi/`
+*   **Goal:** Optimize V4 by using CUDA-aware MPI features to allow direct communication using GPU device pointers, reducing host-device copies.
+*   **Manual Actions:**
+    *   **Modify MPI Calls:** Change relevant MPI calls (e.g., `MPI_Bcast`, `MPI_Allreduce`, `MPI_Send`, `MPI_Recv`) to pass **GPU device memory pointers** instead of host pointers. This requires an MPI library built with CUDA support and correctly configured environment.
+    *   **Remove Redundant Copies:** Eliminate `cudaMemcpy` calls that were previously needed solely to stage data for MPI communication.
+    *   **Verify Makefile:** Likely identical to V4 (`nvcc -ccbin=mpicxx`). Correctness depends on the runtime MPI library's CUDA support, not typically compile-time flags specific to this feature.
+    *   **Paths:** Verify `../data/` access.
 
-### Final Project
-```bash
-cd final_project
-make clean && make
-bash scripts/test_final.sh
-bash scripts/summarize_results.sh
-```
+## 5. Key Technologies
+- **MPI (Open MPI):** Distributed memory communication.
+- **CUDA (NVIDIA):** GPU programming (`nvcc`, runtime API, kernels).
+- **C++:** Host code logic.
+- **Make:** Build system.
+- **Bash:** Automation scripts.
 
-## 9. Submission Guidelines
-- Submit as `hw<num>-lastname-firstname.tgz`
-- Include only `template.c/cu` and `Makefile`
-- Must compile on Fedora 37 with GCC 12 and CUDA 12.x
-- No late submissions accepted
+## 6. Current Implementation Status
+*(Update this section as you progress)*
+- **V1 (Serial):** [Not Started / In Progress / Completed]
+- **V2 (MPI Only):** [Not Started / In Progress / Completed]
+- **V3 (CUDA Only):** [Not Started / In Progress / Completed]
+- **V4 (MPI+CUDA):** Base implementation restored from backup. Assumed working.
+- **V5 (CUDA-Aware):** [Not Started / In Progress / Completed]
 
-## 10. Troubleshooting
-Common issues:
-- Makefile TAB vs. Spaces
-- MPI header not found
-- CUDA compiler errors
-- Timeouts in test scripts
-- Linker errors
+**Implemented Layers (in V4 base):**
+  1. Conv1 → ReLU1 → Pool1
+  2. Conv2 → ReLU2 → Pool2 → LRN2
 
-## 11. Future Directions
-- Expanded AlexNet layers
-- Model parallelism
-- Performance optimization
-- Distributed training
-- Advanced profiling integration
+## 7. Development Workflow for Versions
+1.  **Choose Version:** Select the version (V1-V5) to work on.
+2.  **Navigate:** `cd final_project/vX_suffix`
+3.  **Implement:** Modify code in `src/` and `include/` according to the plan in [Section 4](#4-project-version-implementation-plan).
+4.  **Update Makefile:** Adjust compiler, flags, libraries, and **source file list (`SRCS`)** as needed.
+5.  **Build:** Run `make clean && make` within the version directory.
+6.  **Test:** Execute the compiled `template` executable (e.g., `./template` for V1/V3, `mpirun -np X ./template` for V2/V4/V5).
+7.  **Commit:** Save changes frequently using Git.
 
-## 12. References & Resources
-- MPI Forum: mpi-forum.org
-- NVIDIA CUDA Docs: docs.nvidia.com/cuda/
-- PMPP Book (4th Ed.)
-- HPC Community Channels
+## 8. Build & Test Instructions per Version
+
+**(Run commands from within the respective `final_project/vX_suffix` directory)**
+
+*   **V1 (Serial):**
+    ```bash
+    # (Inside final_project/v1_serial/)
+    make clean && make
+    ./template [optional_args]
+    ```
+*   **V2 (MPI Only):**
+    ```bash
+    # (Inside final_project/v2_mpi_only/)
+    make clean && make
+    mpirun -np <num_processes> ./template [optional_args]
+    ```
+*   **V3 (CUDA Only):**
+    ```bash
+    # (Inside final_project/v3_cuda_only/)
+    make clean && make
+    ./template [optional_args]
+    ```
+*   **V4 (MPI+CUDA):**
+    ```bash
+    # (Inside final_project/v4_mpi_cuda/)
+    make clean && make
+    mpirun -np <num_processes> ./template [optional_args]
+    # Use --oversubscribe locally if needed
+    # On cluster, use -hostfile and potentially --map-by node/socket/gpu
+    ```
+*   **V5 (CUDA-Aware MPI):**
+    ```bash
+    # (Inside final_project/v5_cuda_aware_mpi/)
+    # Requires MPI library compiled with CUDA support!
+    make clean && make
+    mpirun -np <num_processes> ./template [optional_args]
+    # Ensure environment variables (e.g., UCX settings) are correct if using UCX backend
+    ```
+
+## 9. Troubleshooting
+- **Makefile Errors:** Check for TABs vs spaces, correct compiler (`g++`, `mpicxx`, `nvcc`), valid flags, correctly listed source files (`SRCS=`).
+- **Include Errors:** Verify include paths (`-I./include`).
+- **Linker Errors:** Check linked libraries (`-lm`, `-lcudart`). For V4/V5, ensure `nvcc` uses the MPI wrapper via `-ccbin=mpicxx`.
+- **MPI Runtime Errors:** Check `mpirun` syntax, host connectivity, firewall settings. Use `--oversubscribe` for local testing beyond core count.
+- **CUDA Errors:** Use `cudaGetLastError()`/`cudaDeviceSynchronize()` after kernel calls and `cudaMemcpy`. Check memory allocations and grid/block dimensions. Ensure target GPU supports chosen compute capability (`-gencode arch=compute_XX,code=sm_XX`).
+- **Path Errors:** Double-check relative paths (`../data/`) in source code.
+
+## 10. Future Directions
+- Implement remaining AlexNet layers (Conv3-5, Fully Connected, Softmax).
+- Optimize CUDA kernels (tiling, shared memory, instruction-level parallelism).
+- Explore different parallelization strategies (model parallelism).
+- Integrate performance profiling tools (nvprof, Nsight Systems/Compute).
+- Implement distributed training (requires gradient synchronization).
+
+## 11. References & Resources
+- MPI Forum: [mpi-forum.org](https://mpi-forum.org/)
+- NVIDIA CUDA Documentation: [docs.nvidia.com/cuda/](https://docs.nvidia.com/cuda/)
+- Programming Massively Parallel Processors (4th Ed.) Textbook & Companion Site
+- Open MPI Documentation: [open-mpi.org](https://www.open-mpi.org/)
+- LLNL HPC Tutorials: [hpc-tutorials.llnl.gov](https://hpc-tutorials.llnl.gov/)
