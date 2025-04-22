@@ -22,14 +22,23 @@ struct LayerParams {
 };
 
 /* --------------- API --------------- */
+// Needs definition in alexnet_mpi.cpp
 void alexnetForwardPassMPI(std::vector<float>& input,
                            const LayerParams& conv1,
                            const LayerParams& conv2,
                            int H, int W, int C,
                            std::vector<float>& output);
 
-/* helper */
-inline int convOutDim(int dim, int F, int P, int S)
-{
+/* -------- Helpers -------- */
+// Defined inline so they can be included in multiple places without linker errors
+
+inline int convOutDim(int dim, int F, int P, int S) {
+    if (S <= 0) return 0; // Avoid division by zero
     return (dim - F + 2 * P) / S + 1;
+}
+
+// *** ADD THIS INLINE DEFINITION ***
+inline int poolOutDim(int dim, int F, int S) {
+    if (S <= 0) return 0; // Avoid division by zero
+    return (dim - F) / S + 1; // Assumes P=0 for pooling
 }
