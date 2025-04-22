@@ -1,62 +1,32 @@
-// final_project/include/layers.hpp
-#ifndef LAYERS_HPP
-#define LAYERS_HPP
+#ifndef LAYERS_CUDA_HPP
+#define LAYERS_CUDA_HPP
 
-#include <cuda_runtime.h>
+#include <vector>
 
-// --- Layer Parameter Structures ---
-struct ConvLayerParams {
-    int inputChannels;
-    int outputChannels;
-    int kernelSize;  // Assumes square kernels (R = S)
-    int stride;
-    int padding;
-    int inputHeight;
-    int inputWidth;
-    int outputHeight;
-    int outputWidth;
-};
+// Launches conv kernel: output size (Ho×Wo×K)
+void cudaConvLayer(
+    float* d_output,
+    const float* d_input,
+    const float* d_weights,
+    const float* d_biases,
+    int H, int W, int C,
+    const int K, const int F, const int S, const int P);
 
-struct PoolLayerParams {
-    int poolSize;    // e.g., 3
-    int stride;      // e.g., 2
-    int inputChannels;
-    int inputHeight;
-    int inputWidth;
-    int outputHeight;
-    int outputWidth;
-};
+// Elementwise ReLU in‐place
+void cudaReluLayer(float* d_data, int N);
 
-struct LRNLayerParams {
-    int channels;    // Number of feature map channels
-    int height;
-    int width;
-    int localSize;   // Typically 5 in AlexNet
-    float alpha;     // Typically 1e-4
-    float beta;      // Typically 0.75
-    float k;         // Typically 2.0
-};
+// Max‐pool in one kernel
+void cudaMaxPoolLayer(
+    float* d_output,
+    const float* d_input,
+    int H, int W, int C,
+    int F_pool, int S_pool);
 
-// --- Existing Launchers for Block1 (Conv1->ReLU->Pool1) ---
-// (Assumed to be implemented elsewhere)
+// Local response normalization
+void cudaLRNLayer(
+    float* d_output,
+    const float* d_input,
+    int H, int W, int C,
+    int N, float alpha, float beta, float k);
 
-// --- New Declarations for Block2: Conv2 -> ReLU2 -> Pool2 -> LRN2 ---
-void launch_conv2d_forward_conv2(
-    const float* d_input, float* d_output,
-    const float* d_weights, const float* d_biases,
-    const ConvLayerParams& params,
-    cudaStream_t stream = 0);
-
-void launch_relu_forward_conv2(float* d_data, int N, cudaStream_t stream = 0);
-
-void launch_maxpool_forward2(
-    const float* d_input, float* d_output,
-    const PoolLayerParams& params,
-    cudaStream_t stream = 0);
-
-void launch_lrn_forward(
-    const float* d_input, float* d_output,
-    const LRNLayerParams& params,
-    cudaStream_t stream = 0);
-
-#endif // LAYERS_HPP
+#endif // LAYERS_CUDA_HPP

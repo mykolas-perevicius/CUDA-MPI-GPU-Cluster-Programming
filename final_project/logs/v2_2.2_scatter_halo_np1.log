@@ -1,0 +1,5 @@
+
+=== Broadcast-All (1 rank) Summary ===
+Final shape    : 13 x 13 x 256
+First 5 vals   : 44.4152 42.4612 40.6967 40.6967 40.6967 
+Last  5 vals   : 40.6967 40.6967 40.6967 42.4612 44.4152 

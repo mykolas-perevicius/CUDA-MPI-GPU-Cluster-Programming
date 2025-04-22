@@ -1,0 +1,3 @@
+WARNING: Gathered size (39936) does not match expected final size (13x13x256 = 43264). Check trim/halo logic.
+shape: 12x13x256
+Sample values: 29.2981 28.7552 28.2351 28.2351 28.2351

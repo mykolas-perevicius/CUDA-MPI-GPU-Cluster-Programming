@@ -1,0 +1,118 @@
+# AI Context for CS485 Final Project: AlexNet Inference (MPI+CUDA) - v1 Complete
+
+## 1. Purpose & Goal
+- **Course:** CS485 GPU Cluster Programming, NJIT, Instructor Andrew Sohn.
+- **Project:** Implement AlexNet inference using MPI and CUDA.
+- **Scope:** Initially Blocks 1 (Conv1->ReLU->Pool1) & 2 (Conv2->ReLU->Pool2->LRN2). Future: Full network.
+- **Goal:** Explore and benchmark staged parallel implementations (Serial -> MPI -> CUDA -> MPI+CUDA -> CUDA-Aware MPI).
+
+## 2. Environment & Tools
+- **Required Target:** Fedora 37, GCC 12, CUDA Toolkit 12.x, Open MPI (CUDA-aware for V5).
+- **Development:** WSL2 (Ubuntu) with GCC 12, Open MPI, CUDA Toolkit 12.8.
+- **Build:** Makefiles (`g++`, `mpicxx`, `nvcc -ccbin=mpicxx`), Bash automation scripts (`scripts/`).
+- **Version Control:** Git.
+
+## 3. Repository Structure (Focus: `final_project`)
+```
+final_project/
+├── v1_serial/              # V1: COMPLETE & TESTED
+│   ├── include/            #   - alexnet.hpp, layers.hpp
+│   ├── src/                #   - main.cpp, alexnet_serial.cpp, layers_serial.cpp
+│   └── Makefile            #   (Uses g++)
+├── v2_mpi_only/            # V2: TARGET for next implementation
+│   ├── include/            #   (Contains V1 code copy)
+│   ├── src/                #   (Contains V1 code copy)
+│   └── Makefile            #   (MPI template, needs SRCS update)
+├── v3_cuda_only/           # V3: (Contains V4 code copy + basic mods)
+│   ├── include/
+│   ├── src/
+│   └── Makefile            #   (CUDA template)
+├── v4_mpi_cuda/            # V4: (Restored from backup - assumed functional baseline MPI+CUDA)
+│   ├── include/
+│   ├── src/
+│   └── Makefile            #   (Uses nvcc -ccbin=mpicxx)
+├── v5_cuda_aware_mpi/      # V5: (Restored from backup - needs code modification for CUDA-aware calls)
+│   ├── include/
+│   ├── src/
+│   └── Makefile            #   (Uses nvcc -ccbin=mpicxx)
+├── data/                   # SHARED: Input data, model weights, etc. (Accessed via ../data/)
+├── docs/                   # SHARED: Project documentation, design notes (Accessed via ../docs/)
+├── logs/                   # Basic run logs (gitignored)
+├── logs_extended/          # Detailed performance logs (gitignored)
+├── original_backup_*/      # Backup of initial V4/V5 state (gitignored)
+├── Makefile.original_v4_v5 # Reference Makefile for V4/V5 base
+└── README.md               # Main project README detailing versions and plans
+```
+
+## 4. Staged Implementation Plan & Philosophy
+- **Versions:** V1 (Serial), V2 (MPI CPU), V3 (CUDA Single GPU), V4 (MPI+CUDA Hybrid), V5 (CUDA-Aware MPI).
+- **Sub-Versions:** Acknowledged (e.g., V2.1 vs V2.2 MPI strategies). Documented in README. Implement one primary approach per version folder first.
+- **Current Status:** **V1 is complete, compiled with `g++`, and runs successfully.**
+
+## 5. V1 (Serial CPU) Details - COMPLETED
+- **Location:** `final_project/v1_serial/`
+- **Code:** Pure C++ (`std=c++11`), uses `std::vector<float>`.
+- **Layers Implemented:** Conv1, ReLU1, MaxPool1, Conv2, ReLU2, MaxPool2, LRN2.
+- **Key Struct (`include/alexnet.hpp`):**
+  ```c++
+  struct LayerParams {
+      std::vector<float> weights;
+      std::vector<float> biases;
+      int K, F, S, P; // Conv params
+      int F_pool;     // Pooling Filter Size
+      int S_pool;     // Pooling Stride
+      int N_lrn;      // LRN Window Size
+      float alpha;    // LRN alpha
+      float beta;     // LRN beta
+      float k_lrn;    // LRN k
+  };
+  ```
+- **Key Serial Function Prototypes (`include/layers.hpp`):**
+  ```c++
+  void serialConvLayer(std::vector<float>& output, const std::vector<float>& input, ...);
+  void serialReluLayer(std::vector<float>& data);
+  void serialMaxPoolLayer(std::vector<float>& output, const std::vector<float>& input, ...);
+  void serialLRNLayer(std::vector<float>& output, const std::vector<float>& input, ...);
+  ```
+- **Main Forward Pass Prototype (`include/alexnet.hpp`):**
+  ```c++
+  void alexnetForwardPass(std::vector<float>& input_data, const LayerParams& paramsConv1, const LayerParams& paramsConv2, int H, int W, int C);
+  ```
+- **Example Parameters Used in V1 (`src/main.cpp`):**
+  ```c++
+  int H = 227, W = 227, C = 3;
+  // Conv1 / Pool1
+  paramsConv1.K = 96; paramsConv1.F = 11; paramsConv1.S = 4; paramsConv1.P = 0;
+  paramsConv1.F_pool = 3; paramsConv1.S_pool = 2;
+  // Conv2 / Pool2 / LRN2
+  paramsConv2.K = 256; paramsConv2.F = 5; paramsConv2.S = 1; paramsConv2.P = 2;
+  paramsConv2.F_pool = 3; paramsConv2.S_pool = 2;
+  paramsConv2.N_lrn = 5; paramsConv2.alpha = 0.0001f; paramsConv2.beta = 0.75f; paramsConv2.k_lrn = 2.0f;
+  ```
+- **V1 Output:** Compiles cleanly with `make` (using `g++`), runs `./template`, prints layer dimensions, executes in ~400-500ms (on test machine), prints sample output values. Confirmed functional baseline.
+
+## 6. Immediate Task: Implement V2, Approach 2.1 (MPI Only - Broadcast All)
+- **Location:** `final_project/v2_mpi_only/`
+- **Goal:** Parallelize V1 using MPI across multiple CPU cores.
+- **Strategy (2.1):**
+    1.  **Copy V1 code** (`.cpp`, `.hpp`) into `v2_mpi_only/`, rename `*_serial.cpp` -> `*_mpi.cpp`.
+    2.  **Init MPI:** `main.cpp` handles `MPI_Init`, `MPI_Comm_*`, `MPI_Finalize`.
+    3.  **Bcast All:** Rank 0 inits full input & params, Bcasts sizes, non-0 ranks alloc, Rank 0 Bcasts full data vectors (`h_inputData`, all `weights`, `biases`).
+    4.  **Local Compute Full:** *All ranks* execute the full V1 sequence (`alexnetForwardPassMPI` calling `layers_mpi.cpp` functions which contain *identical V1 serial logic*) locally on broadcasted data.
+    5.  **Extract Final Slice:** Each rank calculates its `start_row`/`end_row` for the *final* LRN2 output map only, extracts this data into a `local_slice` vector.
+    6.  **Gather Slice:** Rank 0 gathers slice sizes (`MPI_Gather`), calculates `recvcounts`/`displs`, gathers `local_slice` vectors (`MPI_Gatherv`).
+    7.  **Verify:** Rank 0 compares gathered result vs V1 (optional).
+    8.  **Makefile:** Use `mpicxx`, update `SRCS` list, link `-lm`.
+
+## 7. Future Tasks (Overview)
+- **V3:** Port V1 compute logic to CUDA kernels (`__global__`), manage GPU memory (`cudaMalloc`/`cudaMemcpy`), run on single GPU. Remove MPI. Build with `nvcc`.
+- **V4:** Integrate V2's MPI structure with V3's CUDA kernels. Manage host<->device transfers for MPI communication. Build with `nvcc -ccbin=mpicxx`. Restore from backup as baseline.
+- **V5:** Modify V4 MPI calls (`MPI_Bcast`, `MPI_Gather`, etc.) to use GPU device pointers directly (requires CUDA-aware Open MPI). Remove staging host<->device copies. Build with `nvcc -ccbin=mpicxx`.
+
+## 8. Build & Run Commands (Examples)
+- `cd final_project/v1_serial && make && ./template`
+- `cd final_project/v2_mpi_only && make && mpirun -np <N> ./template`
+- `cd final_project/v3_cuda_only && make && ./template`
+- `cd final_project/v4_mpi_cuda && make && mpirun -np <N> ./template`
+- `cd final_project/v5_cuda_aware_mpi && make && mpirun -np <N> ./template`
+```
