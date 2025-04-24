@@ -2,7 +2,9 @@
 
 ## 🚀 1 Strategic Vision, Research Motivations, and Technical Milieu
 
-*This investigation interrogates, with fine‑grained quantitative rigor, the algorithmic and systems‑level ramifications of scaling AlexNet inference from a uniprocessor reference implementation to a fully distributed, heterogeneous execution environment composed of multiple CUDA‑capable GPUs spread across several interconnected Linux nodes; the study systematically leverages the MPI + CUDA software stack and the SPMD design philosophy that constitute the conceptual backbone of CS485.*
+*This investigation interrogates, with fine‑grained quantitative rigor, the algorithmic and systems‑level ramifications of scaling AlexNet inference from a uniprocessor reference implementation to a fully distributed, heterogeneous execution environment composed of multiple CUDA‑capable GPUs spread across several interconnected Linux nodes; the study systematically leverages the MPI + CUDA software stack and the SPMD design philosophy that constitute the conceptual backbone of CS485
+
+![AlexNet Diagram](final_project/docs/1_M4jjkOPxvOYNk8f1c7rOcQ.png)
 
 ### 🧠 1.1 Scientific Hypothesis
 We hypothesise that each successive enrichment of the parallel programming paradigm—transitioning from shared‑nothing CPU processes (MPI) to on‑device massive parallelism (CUDA) and finally to CUDA‑aware interconnects—will expose distinct performance inflection points where data‑movement overheads, memory‑hierarchy constraints, and kernel‑execution characteristics become the primary limiting factors. Identifying those pivot points is prerequisite for crafting a balanced compute‑communication design that attains near‑optimal resource utilisation on commodity GPU clusters.
