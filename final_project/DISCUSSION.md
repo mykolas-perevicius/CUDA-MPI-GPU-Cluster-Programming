@@ -1,100 +1,114 @@
-# Project Discussion
+# CS485 Final Project: Discussion Log & Professor Meeting Prep
 
-**Project:** AlexNet Inference (MPI+CUDA Staged Implementation)
+**Project:** AlexNet Inference (MPI+CUDA Staged Implementation) - Blocks 1 & 2 Focus
+**Student:** [Your Name]
+**Date Started:** [Date file created]
+**Last Updated:** [Current Date]
+
 **Purpose:** This document serves as a rolling log to prepare for discussions with Professor Sohn regarding the CS485 final project. It outlines current status, challenges, questions, and proposed next steps. Meeting summaries will be manually added at the bottom after each discussion.
 
+---
 
 ## 1. Project Overview & Goal Reminder
 
-*   **Objective:** Implement and benchmark AlexNet inference (initially Blocks 1 & 2) using a 5-stage approach: V1 (Serial), V2 (MPI CPU), V3 (CUDA GPU), V4 (MPI+CUDA), V5 (CUDA-Aware MPI).
+*   **Objective:** Implement and benchmark inference for **AlexNet Blocks 1 & 2** using a 5-stage approach: V1 (Serial), V2 (MPI CPU), V3 (CUDA GPU), V4 (MPI+CUDA), V5 (CUDA-Aware MPI). The primary goal is learning parallelization techniques and performance analysis on this subset.
 *   **Target Environment:** Fedora 37, GCC 12, CUDA 12.x, Open MPI.
-*   **Deliverable:** Working code for (at least) the most advanced version achieved, along with performance analysis comparing the different stages.
+*   **Deliverable:** Working code for completed versions (up to V5 ideally), focusing on a comparative performance analysis across the stages. Presentation will highlight the parallelization journey.
 
+---
 
 ## 2. Current Status & Immediate Next Step
 
-*(**Instructions:** Update this section before each meeting)*
+*   **Last Completed Stages:**
+    *   V1 (Serial CPU) - **Completed & Validated.**
+    *   V2 (MPI Only - Approach 2.1: Broadcast All) - **Completed.** Demonstrated poor scaling.
+    *   V2 (MPI Only - Approach 2.2: Scatter+Halo) - **Completed.** Demonstrated expected speedup.
+    *   V3 (CUDA Only - Single GPU) - **Completed.** Functional, needs profiling/optimization.
+*   **Current Focus:** **Version 4 (MPI + CUDA Hybrid)**
+*   **Working Directory:** `final_project/v4_mpi_cuda/`
+*   **Immediate Goal:** Integrate the V2.2 (Scatter+Halo) MPI logic with the V3 CUDA kernels. This involves managing data distribution via MPI on host buffers, implementing explicit Host<->Device copies (`cudaMemcpy`) around MPI communication and kernel launches, ensuring GPU affinity, and synchronizing MPI/CUDA operations. Build using `nvcc -ccbin=mpicxx`.
 
-*   **Last Completed Stage:** Version 1 (Serial CPU) - Successfully implemented, compiled, and tested the first two blocks (Conv1->ReLU->Pool1, Conv2->ReLU->Pool2->LRN2) using pure C++. Established functional baseline. Code located in `final_project/v1_serial/`.
-*   **Current Focus:** **Version 2 (MPI Only - CPU)** - Implementing Approach 2.1 (Broadcast All).
-*   **Working Directory:** `final_project/v2_mpi_only/`
-*   **Immediate Goal:** Get the basic MPI structure working: initialize MPI, broadcast input data & parameters from Rank 0, have all ranks run the full V1 serial computation locally, extract the final output slice per rank, and gather the slices back to Rank 0 using `MPI_Gatherv`.
-
+---
 
 ## 3. Recent Accomplishments / Milestones Achieved
 
-*(**Instructions:** List key progress made since the last discussion)*
+*   Completed V1 (Serial) implementation and established baseline performance (~617ms).
+*   Implemented V2 MPI using two distinct strategies:
+    *   V2.1 (Broadcast All): Validated basic MPI, highlighted scalability issues (~660ms -> ~802ms for np=1->4).
+    *   V2.2 (Scatter+Halo): Successfully implemented more complex halo exchange logic using non-blocking MPI, demonstrating expected speedup (~491ms -> ~177ms for np=1->4).
+*   Completed V3 (CUDA Only) implementation: Ported layer logic to basic CUDA kernels, functional on single GPU (~750ms, needs optimization/profiling).
+*   Established robust project structure with versioned directories and comprehensive documentation (`README.md`, `RESEARCH.md`, `ai_context.txt`, `discussion.md`).
 
-*   Successfully implemented, debugged, and tested the full V1 (Serial CPU) implementation for the first two blocks of AlexNet. Verified correct layer output dimensions and established baseline execution time (~400-500ms on dev machine).
-*   Established the 5-version project structure within the `final_project` directory using scaffolding scripts.
-*   Configured Makefiles for different compilation needs (`g++` for V1, templates for `mpicxx`/`nvcc`).
-*   Set up `ai_context.txt` and refined prompts for efficient AI collaboration.
-*   Identified and documented distinct implementation strategies for V2 (Approach 2.1: Broadcast All vs. Approach 2.2: Scatter+Halo).
-
+---
 
 ## 4. Current Challenges / Roadblocks / Issues
 
-*(**Instructions:** List specific technical or conceptual problems you are facing)*
+*   **Anticipated for V4:**
+    *   **MPI+CUDA Integration Complexity:** Correctly orchestrating the sequence: `MPI_Recv (Host)` -> `cudaMemcpy H2D` -> `Launch Kernel` -> `cudaDeviceSync/EventSync` -> `cudaMemcpy D2H` -> `MPI_Send (Host)`. This applies particularly to halo exchanges.
+    *   **Synchronization:** Ensuring CUDA operations complete before data is used by MPI (and vice-versa) without introducing unnecessary serialization or deadlocks. Correct use of `MPI_Wait/Test` and CUDA Events/Streams.
+    *   **Host Staging Bottleneck:** The explicit H<->D copies required before/after MPI calls are expected to be a significant performance bottleneck compared to pure CUDA or potential V5. Quantifying this overhead will be key.
+    *   **GPU Affinity:** Correctly setting `cudaSetDevice` based on local rank to ensure each MPI process uses its designated GPU on multi-GPU nodes.
+    *   **Debugging Hybrid Code:** Debugging issues that might stem from the interaction between MPI state and CUDA state will be challenging. Requires combined debugging approaches.
+    *   **Makefile Complexity:** Ensuring the `nvcc -ccbin=mpicxx` build process correctly compiles CUDA (`.cu`) and C++ (`.cpp`) files and links against both CUDA and MPI libraries.
 
-*   **Anticipated for V2.1:**
-    *   **`MPI_Bcast` Correctness:** Ensuring `MPI_Bcast` works reliably for `std::vector<float>` data across different MPI implementations/environments. Need to broadcast size first, then data.
-    *   **`MPI_Gatherv` Complexity:** Correctly calculating `recvcounts` (size of each rank's final slice) and `displs` (displacement offsets in Rank 0's receive buffer) for potentially non-uniform slice sizes (if `H_final` is not divisible by `num_procs`).
-    *   **Indexing for Slice Extraction:** Correctly mapping the 3D indices of the final output map (computed locally) to the 1D indices within the `local_slice` vector for each rank.
-    *   **Debugging:** Setting up an efficient workflow for debugging MPI code (e.g., conditional print statements based on rank, using a debugger like `gdb` with multiple processes if possible).
-    *   **Relative Path Usage:** Ensuring `../data/` paths work correctly when the MPI executable is launched (depends on `mpirun`'s working directory handling).
-
+---
 
 ## 5. Specific Questions for Professor Sohn
 
-*(**Instructions:** List clear, concise questions. Provide context if needed.)*
+*(**Instructions:** Review/update before meeting)*
 
-1.  **V2 Strategy Validation:** Is the chosen initial V2 strategy (Approach 2.1: Broadcast All, Compute Locally, Gather Final Slice) a sound pedagogical approach for demonstrating MPI understanding for this project stage, or is implementing halo exchanges (Approach 2.2) considered essential early on?
-2.  **`MPI_Gatherv` Best Practices:** Are there recommended robust methods or common pitfalls when calculating `recvcounts` and `displs` for `MPI_Gatherv`, especially when dealing with potentially uneven data distribution from slicing feature maps?
-3.  **MPI Debugging:** Any specific recommendations for debugging MPI applications on the target cluster (if applicable) or general tips beyond rank-based printing? Are tools like TotalView or DDT available/recommended?
-4.  **Submission Scope:** For the final project submission, should we submit code for *all* implemented versions (V1, V2, V3, V4, potentially V5), or primarily the most advanced working version (V4/V5) accompanied by the comparative performance report covering all stages?
-5.  **Parameter Handling:** For V2+, is broadcasting all parameters acceptable, or should we explore more advanced distribution if the model grows significantly larger (relevant for future stages)?
-6.  **Performance Metrics:** Beyond overall wall-clock time speedup (V2 vs V1, V4 vs V3, etc.), what specific performance metrics (e.g., communication time vs computation time, memory usage per rank) are most important to measure and report for this project?
+1.  **V4 Integration Strategy:** Given V2.2 (Scatter+Halo) and V3 (CUDA kernels) are complete, what are common pitfalls or recommended patterns for structuring the V4 hybrid code, specifically regarding the placement and synchronization of `cudaMemcpy` calls around the MPI halo exchange logic (`MPI_Isend`/`Irecv`/`Wait`)?
+2.  **V4 Performance Expectation:** Considering the host staging overhead, is it expected that V4 (MPI+CUDA) might initially perform *worse* than V3 (CUDA only) or even V2.2 (MPI only) for a small number of processes/nodes? How should we interpret such results?
+3.  **Asynchronous Operations (Overlap):** Should we attempt to implement asynchronous overlap (CUDA streams with `cudaMemcpyAsync` and non-blocking MPI) in V4/V5, or is mastering the synchronous host-staging approach sufficient for V4?
+4.  **V5 Feasibility Check:** What steps should we take to verify if the target cluster's Open MPI installation is truly CUDA-aware and supports efficient GPU Direct RDMA? Are there specific environment variables or test programs recommended?
+5.  **Profiling Hybrid Code:** What's the recommended approach for profiling V4/V5 on the cluster? Can Nsight Systems effectively capture both MPI and CUDA timelines, or should we primarily rely on manual `MPI_Wtime` and CUDA Event timers?
+6.  **Presentation Scope Confirmation:** Reconfirming that the primary presentation deliverable is the comparative analysis of V1-V5 performance for Blocks 1&2, rather than a fully implemented AlexNet.
 
+---
 
 ## 6. Proposed Next Steps / Plan
 
-*(**Instructions:** Outline your plan for the next week or until the next meeting)*
+*(**Instructions:** Outline plan until next meeting)*
 
-1.  **Implement V2.1 (`v2_mpi_only/`):**
-    *   Copy working V1 code (`.cpp`, `.hpp`) to `v2_mpi_only/`. Rename files (`*_serial.cpp` -> `*_mpi.cpp`).
-    *   Implement MPI setup/teardown and parameter/data broadcasting in `src/main.cpp`.
-    *   Modify `src/alexnet_mpi.cpp` to run the full V1 sequence locally and add logic to extract the final output slice per rank.
-    *   Ensure `src/layers_mpi.cpp` contains the correct (unmodified from V1) serial layer logic.
-    *   Implement `MPI_Gatherv` logic in `src/main.cpp` on Rank 0.
-    *   Update `Makefile` to use `mpicxx` and correct source files.
-2.  **Compile & Test V2.1:** Use `make` and `mpirun -np [2, 4, 8] ./template` (with `--oversubscribe` locally).
-3.  **Debug V2.1:** Resolve any compilation or runtime errors. Focus on correct data distribution and aggregation.
-4.  **(Optional) Verification:** Add code to Rank 0 to compare the gathered MPI result against the V1 serial result for a small test case.
-5.  **Begin V3 Planning:** Review V1 code to identify sections suitable for CUDA kernel implementation. Outline V3 (CUDA Only) structure.
+1.  **Implement V4 (`v4_mpi_cuda/`):**
+    *   Start with restored baseline code.
+    *   Integrate V2.2 `main.cpp` MPI logic (Scatterv, Isend/Irecv/Wait for halo, Gatherv).
+    *   Integrate V3 `alexnet_cuda.cu` kernel launch logic.
+    *   Implement **explicit H<->D copies** (`cudaMemcpy`) around MPI calls (halo exchange, initial scatter, final gather).
+    *   Copy V3 CUDA kernels (`layers_cuda.cu`) and headers.
+    *   Implement GPU affinity (`cudaSetDevice`).
+    *   Implement necessary synchronization (`MPI_Wait`, `cudaDeviceSynchronize` or Events).
+    *   Update `Makefile` for `nvcc -ccbin=mpicxx`.
+2.  **Compile & Test V4:** Use `make` and `mpirun -np [2, 4, 8] ./template` (on appropriate nodes/GPUs).
+3.  **Debug V4:** Resolve integration issues, focusing on data consistency between host/device and correct synchronization.
+4.  **Initial V4 Performance Measurement:** Record wall time using `MPI_Wtime` and CUDA Events. Compare rough timing with V2.2 and V3.
+5.  **Plan V5:** Based on V4 experience and cluster verification, outline specific code changes needed for CUDA-aware MPI calls.
 
+---
 
 ## 7. Design Decisions & Considerations
 
 *(**Instructions:** Note significant choices made and alternatives considered)*
 
-*   **V2 Strategy Choice:** Selected Approach 2.1 (Broadcast All) for initial V2 implementation due to its relative simplicity compared to Approach 2.2 (Scatter+Halo). This prioritizes getting a functional MPI version running before tackling complex communication patterns. The trade-off is higher memory usage per rank.
-*   **Data Structures:** Continuing to use `std::vector<float>` for simplicity in V1/V2. May reconsider using raw pointers (`float*`) with manual memory management (`new`/`delete[]`) if performance/memory becomes a major issue or for easier integration with CUDA memory allocation in V3/V4.
-*   **Intermediate Buffers (V1/V2):** Using a ping-pong buffer approach (`buffer1`, `buffer2`) in the forward pass function to avoid unnecessary data copies between layers.
+*   **V2 Strategy Choice:** Implemented both V2.1 (Broadcast) and V2.2 (Scatter+Halo) to directly compare simple vs. scalable MPI approaches. V2.2 provides the better foundation for V4.
+*   **V3 Kernels:** Implemented basic, functionally correct CUDA kernels. Performance optimization deferred to later or as part of V4/V5 profiling.
+*   **V4 Initial Plan:** Focus on correct synchronous host-staging implementation first before attempting asynchronous overlap.
+*   **Data Structures:** Using `std::vector` on host, raw `float*` (`cudaMalloc`) on device for V3+. Pinned host memory (`cudaMallocHost`) should be considered for V4/V5 staging buffers to enable async copies later.
 
+---
 
-## 8. Performance & Benchmarking
+## 8. Performance & Benchmarking (WSL2 Dev Machine - Blocks 1&2)
 
-*(**Instructions:** Add results and analysis here as versions are completed and timed)*
-
-*   **V1 (Serial) Baseline:** ~ [V1 Time, e.g., 477] ms (on [Dev Machine Specs, e.g., WSL2 Ubuntu, CPU Model]) for Blocks 1 & 2.
-*   **V2 (MPI):**
-    *   Target: Measure wall time using `MPI_Wtime()`.
-    *   Metrics: Speedup vs V1 (`T_V1 / T_V2(P)`) for P=2, 4, 8... processes. Scalability analysis.
-    *   Results: *(To be added)*
-*   **V3 (CUDA):** *(To be added)*
+*   **V1 (Serial):** ~617 ms (np=1)
+*   **V2 (MPI - 2.1 Broadcast):** ~660ms (np=1), ~704ms (np=2), ~802ms (np=4) -> **Degrades**
+*   **V2 (MPI - 2.2 Scatter+Halo):** ~491ms (np=1), ~334ms (np=2), ~177ms (np=4) -> **Speeds up**
+*   **V3 (CUDA):** ~750 ms (np=1) -> **Needs Profiling/Optimization**
 *   **V4 (MPI+CUDA):** *(To be added)*
 *   **V5 (CUDA-Aware MPI):** *(To be added)*
 
+*(Note: Absolute times will differ on target cluster. Relative scaling and bottlenecks are key points of analysis.)*
+
+---
 ---
 
 ## Meeting Summaries & Action Items
@@ -102,28 +116,8 @@
 *(**Instructions:** Manually add notes after each meeting with the professor)*
 
 **YYYY-MM-DD - Discussion with Prof. Sohn**
-
-*   **Topics Discussed:**
-    *   [Point 1]
-    *   [Point 2]
-    *   [Question X answered]
-*   **Key Feedback / Decisions:**
-    *   [Feedback item 1]
-    *   [Decision made on strategy Y]
-*   **Action Items:**
-    *   [Your action item 1 - Due Date]
-    *   [Your action item 2 - Due Date]
-    *   [Professor action item (if any)]
-
----
-
-**YYYY-MM-DD - Discussion with Prof. Sohn**
-
-*   **Topics Discussed:**
-    *   ...
-*   **Key Feedback / Decisions:**
-    *   ...
-*   **Action Items:**
-    *   ...
+*   **Topics Discussed:** ...
+*   **Key Feedback / Decisions:** ...
+*   **Action Items:** ...
 
 ---

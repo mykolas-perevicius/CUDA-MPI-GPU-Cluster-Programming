@@ -610,18 +610,26 @@ struct LayerParams {
 };
 
 /* --------------- API --------------- */
+// Needs definition in alexnet_mpi.cpp
 void alexnetForwardPassMPI(std::vector<float>& input,
                            const LayerParams& conv1,
                            const LayerParams& conv2,
                            int H, int W, int C,
                            std::vector<float>& output);
 
-/* helper */
-inline int convOutDim(int dim, int F, int P, int S)
-{
+/* -------- Helpers -------- */
+// Defined inline so they can be included in multiple places without linker errors
+
+inline int convOutDim(int dim, int F, int P, int S) {
+    if (S <= 0) return 0; // Avoid division by zero
     return (dim - F + 2 * P) / S + 1;
 }
 
+// *** ADD THIS INLINE DEFINITION ***
+inline int poolOutDim(int dim, int F, int S) {
+    if (S <= 0) return 0; // Avoid division by zero
+    return (dim - F) / S + 1; // Assumes P=0 for pooling
+}
 
 ================================================================================
 
@@ -655,20 +663,26 @@ void serialLRNLayer(std::vector<float>& out,
 === FILE: final_project/v2_mpi_only/2.2_scatter_halo/src/main.cpp ===
 
 // final_project/v2_mpi_only/2.2_scatter_halo/src/main.cpp
-// Full corrected file:
 #include <mpi.h>
 #include <iostream>
 #include <vector>
 #include <algorithm>
 #include <numeric>
 #include <iomanip> // For std::fixed, std::setprecision if needed
-#include "../include/alexnet.hpp"
-#include "../include/layers.hpp"
+#include <cmath>   // Needed for std::max
+#include <chrono>  // For timing
 
-// 3D index helper
+#include "../include/alexnet.hpp" // Includes LayerParams and inline helpers
+#include "../include/layers.hpp"  // Includes serial layer function prototypes
+
+// 3D index helper (local definition ok)
 inline size_t idx3D(int h, int w, int c, int W, int C) {
+    // Add checks for h, w, c boundaries if needed for robustness
     return (static_cast<size_t>(h) * W + w) * C + c;
 }
+
+// Note: convOutDim and poolOutDim are now defined inline in alexnet.hpp
+
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
@@ -680,34 +694,32 @@ int main(int argc, char** argv) {
     int H = 227, W = 227, C = 3;
     LayerParams conv1, conv2;
     std::vector<float> input, finalOut;
-    int finalH = -1, finalW = -1, finalC = -1; // To store final dimensions
+    int finalH = -1, finalW = -1, finalC = -1;
 
     if (rank == 0) {
         // initialize input & params
-        input.assign((size_t)H * W * C, 1.0f); // Use size_t for large allocations
+        input.assign((size_t)H * W * C, 1.0f);
         conv1.K = 96; conv1.F = 11; conv1.S = 4; conv1.P = 0;
         conv1.F_pool = 3; conv1.S_pool = 2;
         conv1.weights.assign((size_t)conv1.K * C * conv1.F * conv1.F, 0.01f);
         conv1.biases.assign(conv1.K, 0.0f);
-
         conv2.K = 256; conv2.F = 5; conv2.S = 1; conv2.P = 2;
         conv2.F_pool = 3; conv2.S_pool = 2;
         conv2.N_lrn = 5; conv2.alpha = 1e-4f; conv2.beta = 0.75f; conv2.k_lrn = 2.0f;
-        conv2.weights.assign((size_t)conv2.K * conv1.K * conv2.F * conv2.F, 0.01f);
+        int C_conv2_input = conv1.K;
+        conv2.weights.assign((size_t)conv2.K * C_conv2_input * conv2.F * conv2.F, 0.01f);
         conv2.biases.assign(conv2.K, 0.0f);
 
-        // Calculate expected final dimensions (needed for printing)
+        // Calculate expected final dimensions (using inline helpers from alexnet.hpp)
         int H1 = convOutDim(H, conv1.F, conv1.P, conv1.S);
-        H1 = convOutDim(H1, conv1.F_pool, 0, conv1.S_pool); // Pool output dim helper is (H-F)/S + 1
         int W1 = convOutDim(W, conv1.F, conv1.P, conv1.S);
-        W1 = convOutDim(W1, conv1.F_pool, 0, conv1.S_pool);
+        H1 = poolOutDim(H1, conv1.F_pool, conv1.S_pool);
+        W1 = poolOutDim(W1, conv1.F_pool, conv1.S_pool);
         int H2 = convOutDim(H1, conv2.F, conv2.P, conv2.S);
-        H2 = convOutDim(H2, conv2.F_pool, 0, conv2.S_pool);
         int W2 = convOutDim(W1, conv2.F, conv2.P, conv2.S);
-        W2 = convOutDim(W2, conv2.F_pool, 0, conv2.S_pool);
-        finalH = H2;
-        finalW = W2;
-        finalC = conv2.K;
+        H2 = poolOutDim(H2, conv2.F_pool, conv2.S_pool);
+        W2 = poolOutDim(W2, conv2.F_pool, conv2.S_pool);
+        finalH = H2; finalW = W2; finalC = conv2.K;
     }
 
     // 2) Broadcast sizes & params
@@ -718,375 +730,223 @@ int main(int argc, char** argv) {
     bcastInt(conv2.K); bcastInt(conv2.F); bcastInt(conv2.S); bcastInt(conv2.P);
     bcastInt(conv2.F_pool); bcastInt(conv2.S_pool);
     bcastInt(conv2.N_lrn);
-    // Broadcast final dimensions calculated by rank 0
     bcastInt(finalH); bcastInt(finalW); bcastInt(finalC);
 
-
     if (rank != 0) {
-        // Use size_t for potentially large vectors
         input.resize((size_t)H * W * C);
         conv1.weights.resize((size_t)conv1.K * C * conv1.F * conv1.F);
         conv1.biases.resize(conv1.K);
-        conv2.weights.resize((size_t)conv2.K * conv1.K * conv2.F * conv2.F);
+        int C_conv2_input = conv1.K;
+        conv2.weights.resize((size_t)conv2.K * C_conv2_input * conv2.F * conv2.F);
         conv2.biases.resize(conv2.K);
     }
-
-    // Broadcast LRN params
     float lrnArr[3];
-    if (rank == 0) {
-        lrnArr[0] = conv2.alpha;
-        lrnArr[1] = conv2.beta;
-        lrnArr[2] = conv2.k_lrn;
-    }
+    if (rank == 0) { lrnArr[0] = conv2.alpha; lrnArr[1] = conv2.beta; lrnArr[2] = conv2.k_lrn; }
     MPI_Bcast(lrnArr,3,MPI_FLOAT,0,MPI_COMM_WORLD);
-    if (rank != 0) {
-        conv2.alpha = lrnArr[0];
-        conv2.beta  = lrnArr[1];
-        conv2.k_lrn = lrnArr[2];
-    }
-
-    // Broadcast model & input (Use size_t for counts derived from vector::size())
+    if (rank != 0) { conv2.alpha = lrnArr[0]; conv2.beta = lrnArr[1]; conv2.k_lrn = lrnArr[2]; }
     MPI_Bcast(input.data(),           static_cast<int>(input.size()),           MPI_FLOAT,0,MPI_COMM_WORLD);
     MPI_Bcast(conv1.weights.data(),   static_cast<int>(conv1.weights.size()),   MPI_FLOAT,0,MPI_COMM_WORLD);
     MPI_Bcast(conv1.biases.data(),    static_cast<int>(conv1.biases.size()),    MPI_FLOAT,0,MPI_COMM_WORLD);
     MPI_Bcast(conv2.weights.data(),   static_cast<int>(conv2.weights.size()),   MPI_FLOAT,0,MPI_COMM_WORLD);
     MPI_Bcast(conv2.biases.data(),    static_cast<int>(conv2.biases.size()),    MPI_FLOAT,0,MPI_COMM_WORLD);
 
-    // Path A: broadcast-all if only one rank (Already has compatible output)
+    // --- Barrier before starting main computation (optional) ---
+    MPI_Barrier(MPI_COMM_WORLD);
+    auto t_start_compute = std::chrono::high_resolution_clock::now(); // *** Start Compute Timer ***
+
+    // Path A: broadcast-all if only one rank (np=1 case)
     if (size == 1) {
+        // Definition is in alexnet_mpi.cpp
         alexnetForwardPassMPI(input, conv1, conv2, H, W, C, finalOut);
-
-        // Use the dimensions calculated earlier
-        std::cout << "\n=== Broadcast-All (1 rank) Summary ===\n";
-        // *** OUTPUT MODIFICATION for script compatibility ***
-        std::cout << "shape: " << finalH << "x" << finalW << "x" << finalC << std::endl; // Use lowercase "shape:"
-        std::cout << "Sample values: "; // Use "Sample values:"
-        int num_to_print = std::min((size_t)5, finalOut.size());
-        for (int i = 0; i < num_to_print; ++i) {
-            std::cout << finalOut[i] << (i == num_to_print - 1 ? "" : " ");
-        }
-        std::cout << std::endl;
-        // Optional: Print last 5 for debugging if needed, but script doesn't use it
-        // std::cout << "Last  5 vals   : ";
-        // for (int i = std::max(0,(int)finalOut.size()-5); i < (int)finalOut.size(); ++i)
-        //     std::cout << finalOut[i] << " ";
-        // std::cout << "\n";
-
-        MPI_Finalize();
-        return 0;
     }
-
-    // Path B: scatter + halo
-
-    // 3) Scatter input
-    std::vector<int> sendCnt(size), sendDisp(size);
-    int base = H / size, rem = H % size;
-    if (rank == 0) { // Only rank 0 needs to calculate full sendCnt/sendDisp
-        sendDisp[0] = 0;
-        for (int i = 0; i < size; ++i) {
-            int rows = base + (i < rem ? 1 : 0);
-            sendCnt[i]  = rows * W * C;
-            if (i > 0) {
-                sendDisp[i] = sendDisp[i - 1] + sendCnt[i - 1];
+    // Path B: scatter + halo (np > 1 case)
+    else {
+        // 3) Scatter input
+        std::vector<int> sendCnt(size), sendDisp(size);
+        int base = H / size, rem = H % size;
+        if (rank == 0) {
+            sendDisp[0] = 0;
+            for (int i = 0; i < size; ++i) {
+                int rows = base + (i < rem ? 1 : 0);
+                sendCnt[i]  = rows * W * C;
+                if (i > 0) { sendDisp[i] = sendDisp[i - 1] + sendCnt[i - 1]; }
             }
         }
-    }
-    // Scatter the counts to all processes
-    int localCnt;
-    MPI_Scatter(sendCnt.data(), 1, MPI_INT, &localCnt, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        int localCnt;
+        MPI_Scatter(sendCnt.data(), 1, MPI_INT, &localCnt, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        std::vector<float> localIn(localCnt);
+        MPI_Scatterv(input.data(), sendCnt.data(), sendDisp.data(), MPI_FLOAT,
+                     localIn.data(), localCnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+        int localH = (W*C > 0) ? localCnt / (W * C) : 0;
 
-    std::vector<float> localIn(localCnt);
-    MPI_Scatterv(input.data(), sendCnt.data(), sendDisp.data(), // Rank 0 uses full arrays
-                 MPI_FLOAT, localIn.data(), localCnt, MPI_FLOAT, // Others receive based on localCnt
-                 0, MPI_COMM_WORLD);
-    int localH = localCnt / (W * C);
-
-    // 4) Halo for Conv1
-    const int pad1 = conv1.F / 2; // Assuming padding is such that F is odd
-    if (pad1 <= 0) { /* Handle case with no padding/halo needed if F=1? */ }
-    int slice1 = pad1 * W * C;
-    std::vector<float> topHalo(slice1), botHalo(slice1);
-
-    MPI_Request send_req_up = MPI_REQUEST_NULL, recv_req_up = MPI_REQUEST_NULL;
-    MPI_Request send_req_down = MPI_REQUEST_NULL, recv_req_down = MPI_REQUEST_NULL;
-
-    // Non-blocking send/recv for halo exchange
-    if (rank > 0) {
-        MPI_Irecv(topHalo.data(), slice1, MPI_FLOAT, rank - 1, 1, MPI_COMM_WORLD, &recv_req_up);
-        MPI_Isend(localIn.data(), slice1, MPI_FLOAT, rank - 1, 0, MPI_COMM_WORLD, &send_req_up);
-    } else {
-        std::fill(topHalo.begin(), topHalo.end(), 0.0f); // Rank 0 pads top with 0
-    }
-    if (rank < size - 1) {
-        MPI_Irecv(botHalo.data(), slice1, MPI_FLOAT, rank + 1, 0, MPI_COMM_WORLD, &recv_req_down);
-        MPI_Isend(localIn.data() + (size_t)(localH - pad1) * W * C, slice1, MPI_FLOAT, rank + 1, 1, MPI_COMM_WORLD, &send_req_down);
-    } else {
-        std::fill(botHalo.begin(), botHalo.end(), 0.0f); // Last rank pads bottom with 0
-    }
-
-    // Wait for halo exchange to complete
-    MPI_Wait(&recv_req_up, MPI_STATUS_IGNORE);
-    MPI_Wait(&send_req_up, MPI_STATUS_IGNORE);
-    MPI_Wait(&recv_req_down, MPI_STATUS_IGNORE);
-    MPI_Wait(&send_req_down, MPI_STATUS_IGNORE);
-
-
-    // 5) Conv1 → ReLU1 → Pool1
-    int pH1 = localH + 2 * pad1;
-    std::vector<float> padded1((size_t)pH1 * W * C); // Use size_t
-    std::copy(topHalo.begin(), topHalo.end(), padded1.begin());
-    std::copy(localIn.begin(), localIn.end(), padded1.begin() + slice1);
-    std::copy(botHalo.begin(), botHalo.end(), padded1.begin() + slice1 + localIn.size());
-
-    int Hc1 = convOutDim(pH1, conv1.F, conv1.P, conv1.S);
-    int Wc1 = convOutDim(W,   conv1.F, conv1.P, conv1.S);
-    std::vector<float> c1out((size_t)Hc1 * Wc1 * conv1.K); // Use size_t
-    serialConvLayer(c1out, padded1, conv1, pH1, W, C);
-    serialReluLayer(c1out);
-
-    int Hp1 = convOutDim(Hc1, conv1.F_pool, 0, conv1.S_pool); // Pool uses (H-F)/S+1
-    int Wp1 = convOutDim(Wc1, conv1.F_pool, 0, conv1.S_pool);
-    std::vector<float> pool1_p((size_t)Hp1 * Wp1 * conv1.K); // Use size_t
-    serialMaxPoolLayer(pool1_p, c1out,
-                       Hc1, Wc1, conv1.K,
-                       conv1.F_pool, conv1.S_pool);
-
-    // 6) Asymmetric trim of pool1_p - remove rows corresponding to halo padding
-    // Calculate how many rows in the *output* of pooling correspond to the *input* halo padding
-    int pool_out_rows_from_pad1 = (pad1 + conv1.S_pool - 1) / conv1.S_pool; // Rough estimate, might need exact calc based on kernel overlap
-    // A more precise way might involve calculating the output index range corresponding to the original local data
-    // int input_start_row_idx = pad1;
-    // int input_end_row_idx = pad1 + localH -1;
-    // int pool1_out_rows_from_pad1 = conv1_out_rows_from_pad1 / conv1.S_pool; // 1 / 2 = 0 rows ?? This seems wrong.
-
-    // Simpler approximation: Trim based on pool stride applied to original pad size
-    int trim_top = (rank > 0        ) ? pool_out_rows_from_pad1 : 0;
-    int trim_bot = (rank < size - 1 ) ? pool_out_rows_from_pad1 : 0;
-
-    // Need more careful calculation if stride/filter size causes complex overlaps
-    // Let's assume simple trimming works for now for this example structure
-    // If conv1.S != 1 or conv1.S_pool != 1, this calculation needs refinement.
-    int conv1_out_rows_from_pad1 = pad1 / conv1.S; // Assuming S=4 -> 11/2 / 4 = 5/4 = 1 row
-    int pool1_out_rows_from_pad1 = conv1_out_rows_from_pad1 / conv1.S_pool; // 1 / 2 = 0 rows ?? This seems wrong.
-
-    // Let's recalculate trim based on layer formulas (conv: (H-F+2P)/S+1, pool: (H-F)/S+1)
-    // Assume P=0 for conv1, P=0 for pool1
-    // Output index o corresponds to input index range [o*S, o*S + F - 1] for conv/pool
-    // We want the output rows of pool1 that depend *only* on the original `localIn` data (rows `pad1` to `pad1+localH-1` in `padded1`)
-
-    // For Pool1: Output row `rp` depends on Conv1 output rows `[rp*S_pool, rp*S_pool + F_pool - 1]`
-    // For Conv1: Output row `rc` depends on Padded1 input rows `[rc*S, rc*S + F - 1]`
-    // Combining: Pool1 output `rp` depends on Padded1 input rows `[ (rp*S_pool)*S, (rp*S_pool + F_pool - 1)*S + F - 1 ]` (approx)
-
-    // Let's stick to the simpler trim logic for now and see if it passes tests, otherwise refine.
-    trim_top = (rank > 0           ? pad1 / conv1.S_pool : 0); // Integer division might be tricky
-    trim_bot = (rank < size - 1    ? pad1 / conv1.S_pool : 0);
-
-    // Let's revert to the original simple trim logic from the user code, assuming it was intended
-    trim_top  = (rank > 0           ? pad1 / conv1.S_pool : 0); // If pool S=2, pad1=5 -> 5/2 = 2 rows?
-    trim_bot  = (rank < size - 1    ? pad1 / conv1.S_pool : 0);
-
-    if (trim_top + trim_bot >= Hp1) {
-        // This should not happen if localH is reasonably large
-        if(rank==0) std::cerr << "ERROR: Trim amount exceeds pooled height!" << std::endl;
-        MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-    int realHp1   = Hp1 - trim_top - trim_bot;
-    std::vector<float> pool1Out((size_t)realHp1 * Wp1 * conv1.K); // Use size_t
-
-    if (realHp1 > 0) { // Only copy if there's data left after trimming
-        for (int r = 0; r < realHp1; ++r) {
-            size_t src_off = (size_t)(r + trim_top) * Wp1 * conv1.K;
-            size_t dst_off = (size_t)r              * Wp1 * conv1.K;
-             if (src_off + (size_t)Wp1 * conv1.K <= pool1_p.size() && dst_off + (size_t)Wp1 * conv1.K <= pool1Out.size()) {
-                 std::copy_n(pool1_p.data() + src_off,
-                             (size_t)Wp1 * conv1.K,
-                             pool1Out.data() + dst_off);
-             } else {
-                  if(rank==0) std::cerr << "ERROR: pool1 copy out of bounds! r=" << r << " realHp1=" << realHp1 << " src_off=" << src_off << " dst_off=" << dst_off << std::endl;
-                  MPI_Abort(MPI_COMM_WORLD, 1);
-             }
-        }
-    } else {
-        // If trim resulted in zero height, clear the vector
-        pool1Out.clear();
-        realHp1 = 0; // Ensure dimension is 0
-    }
-
-
-    // 7) Halo Exchange for Conv2 (if needed - depends on padding P2)
-    int C1 = conv1.K;
-    int pad2 = conv2.F / 2; // Conv2 padding
-    int slice2 = pad2 * Wp1 * C1;
-    std::vector<float> topHalo2(slice2), botHalo2(slice2);
-    MPI_Request send_req2_up = MPI_REQUEST_NULL, recv_req2_up = MPI_REQUEST_NULL;
-    MPI_Request send_req2_down = MPI_REQUEST_NULL, recv_req2_down = MPI_REQUEST_NULL;
-
-    if (pad2 > 0 && realHp1 > 0) { // Only exchange halo if padding exists and current data height > 0
-        if (rank > 0) {
-            MPI_Irecv(topHalo2.data(), slice2, MPI_FLOAT, rank - 1, 3, MPI_COMM_WORLD, &recv_req2_up);
-            MPI_Isend(pool1Out.data(), slice2, MPI_FLOAT, rank - 1, 2, MPI_COMM_WORLD, &send_req2_up);
-        } else {
-            std::fill(topHalo2.begin(), topHalo2.end(), 0.0f);
-        }
-        if (rank < size - 1) {
-             MPI_Irecv(botHalo2.data(), slice2, MPI_FLOAT, rank + 1, 2, MPI_COMM_WORLD, &recv_req2_down);
-             // Careful with source offset calculation if realHp1 < pad2
-             size_t send_offset = (size_t)std::max(0, realHp1 - pad2) * Wp1 * C1;
-             int send_count = std::min(slice2, (int)((size_t)realHp1*Wp1*C1 - send_offset)); // Send at most what's available
-             if (send_count > 0) {
-                 MPI_Isend(pool1Out.data() + send_offset, send_count, MPI_FLOAT, rank + 1, 3, MPI_COMM_WORLD, &send_req2_down);
-             } else {
-                 // If nothing to send (realHp1 <= pad2), need to signal completion or handle appropriately
-                 // For now, assume Isend with count 0 is okay or handle by not sending. Fill receiver buffer.
-                 if (send_req2_down != MPI_REQUEST_NULL) MPI_Request_free(&send_req2_down); // Should not have been set
-                 send_req2_down = MPI_REQUEST_NULL; // Mark as completed implicitly
-                 std::fill(botHalo2.begin(), botHalo2.end(), 0.0f); // Fill halo since no data received
-             }
-
-        } else {
-            std::fill(botHalo2.begin(), botHalo2.end(), 0.0f);
+        // 4) Halo for Conv1
+        const int pad1 = conv1.F / 2;
+        int slice1 = 0; if (pad1 > 0 && W > 0 && C > 0) slice1 = pad1 * W * C;
+        std::vector<float> topHalo(slice1), botHalo(slice1);
+        MPI_Request send_req_up = MPI_REQUEST_NULL, recv_req_up = MPI_REQUEST_NULL;
+        MPI_Request send_req_down = MPI_REQUEST_NULL, recv_req_down = MPI_REQUEST_NULL;
+        if (pad1 > 0) {
+            if (rank > 0) {
+                MPI_Irecv(topHalo.data(), slice1, MPI_FLOAT, rank - 1, 1, MPI_COMM_WORLD, &recv_req_up);
+                MPI_Isend(localIn.data(), slice1, MPI_FLOAT, rank - 1, 0, MPI_COMM_WORLD, &send_req_up);
+            } else { std::fill(topHalo.begin(), topHalo.end(), 0.0f); }
+            if (rank < size - 1) {
+                MPI_Irecv(botHalo.data(), slice1, MPI_FLOAT, rank + 1, 0, MPI_COMM_WORLD, &recv_req_down);
+                MPI_Isend(localIn.data() + (size_t)std::max(0, localH - pad1) * W * C, slice1, MPI_FLOAT, rank + 1, 1, MPI_COMM_WORLD, &send_req_down);
+            } else { std::fill(botHalo.begin(), botHalo.end(), 0.0f); }
+            MPI_Wait(&recv_req_up, MPI_STATUS_IGNORE); MPI_Wait(&send_req_up, MPI_STATUS_IGNORE);
+            MPI_Wait(&recv_req_down, MPI_STATUS_IGNORE); MPI_Wait(&send_req_down, MPI_STATUS_IGNORE);
         }
 
-        // Wait for halo exchange 2
-        MPI_Wait(&recv_req2_up, MPI_STATUS_IGNORE);
-        MPI_Wait(&send_req2_up, MPI_STATUS_IGNORE);
-        MPI_Wait(&recv_req2_down, MPI_STATUS_IGNORE);
-        MPI_Wait(&send_req2_down, MPI_STATUS_IGNORE);
-    } else {
-        // No halo needed or no data to exchange, fill with zeros
-        std::fill(topHalo2.begin(), topHalo2.end(), 0.0f);
-        std::fill(botHalo2.begin(), botHalo2.end(), 0.0f);
-    }
+        // 5) Conv1 → ReLU1 → Pool1
+        int pH1 = localH + 2 * pad1;
+        std::vector<float> padded1((size_t)std::max(0,pH1) * W * C);
+        if (pad1 > 0 && localIn.size() > 0) { // Check localIn isn't empty
+             if (slice1 <= static_cast<int>(padded1.size())) std::copy(topHalo.begin(), topHalo.end(), padded1.begin());
+             if (slice1 + localIn.size() <= padded1.size()) std::copy(localIn.begin(), localIn.end(), padded1.begin() + slice1);
+             if (slice1 + localIn.size() + slice1 <= padded1.size()) std::copy(botHalo.begin(), botHalo.end(), padded1.begin() + slice1 + localIn.size());
+        } else { padded1 = localIn; }
 
-    // Conv2 → ReLU2 → Pool2 → LRN2
-    int pH2 = realHp1 + 2 * pad2;
-    std::vector<float> padded2((size_t)pH2 * Wp1 * C1, 0.0f); // Use size_t
-    if (realHp1 > 0) { // Only copy if pool1Out is not empty
-        std::copy(topHalo2.begin(), topHalo2.end(), padded2.begin());
-        std::copy(pool1Out.begin(), pool1Out.end(), padded2.begin() + slice2);
-        std::copy(botHalo2.begin(), botHalo2.end(), padded2.begin() + slice2 + pool1Out.size());
-    } // else padded2 remains all zeros if realHp1 was 0
+        int Hc1 = convOutDim(pH1, conv1.F, conv1.P, conv1.S);
+        int Wc1 = convOutDim(W,   conv1.F, conv1.P, conv1.S);
+        std::vector<float> c1out((size_t)std::max(0,Hc1) * Wc1 * conv1.K);
+        // Ensure layers are defined (layers_mpi.cpp) - V2 uses different layer signatures!
+        serialConvLayer(c1out, padded1, conv1, pH1, W, C); // V2 uses LayerParams struct
+        serialReluLayer(c1out);
+
+        int Hp1 = poolOutDim(Hc1, conv1.F_pool, conv1.S_pool);
+        int Wp1 = poolOutDim(Wc1, conv1.F_pool, conv1.S_pool);
+        std::vector<float> pool1_p((size_t)std::max(0,Hp1) * Wp1 * conv1.K);
+        serialMaxPoolLayer(pool1_p, c1out, Hc1, Wc1, conv1.K, conv1.F_pool, conv1.S_pool);
 
 
-    int Hc2 = convOutDim(pH2, conv2.F, conv2.P, conv2.S);
-    int Wc2 = convOutDim(Wp1, conv2.F, conv2.P, conv2.S);
-    std::vector<float> c2out((size_t)Hc2 * Wc2 * conv2.K); // Use size_t
-    serialConvLayer(c2out, padded2, conv2, pH2, Wp1, C1);
-    serialReluLayer(c2out);
-
-    int Hp2 = convOutDim(Hc2, conv2.F_pool, 0, conv2.S_pool); // Pool (H-F)/S+1
-    int Wp2 = convOutDim(Wc2, conv2.F_pool, 0, conv2.S_pool); // Wp2 should match finalW
-    std::vector<float> p2out((size_t)Hp2 * Wp2 * conv2.K); // Use size_t
-    serialMaxPoolLayer(p2out, c2out,
-                       Hc2, Wc2, conv2.K,
-                       conv2.F_pool, conv2.S_pool);
-
-    std::vector<float> l2out(p2out.size()); // Use size_t
-    serialLRNLayer(l2out, p2out,
-                   Hp2, Wp2, conv2.K,
-                   conv2.N_lrn, conv2.alpha,
-                   conv2.beta, conv2.k_lrn);
-
-    // 8) Trim output of LRN2 (corresponding to pad2) and Gather
-    // Similar trim logic as before, applied to pad2 and layer 2 strides
-    int conv2_out_rows_from_pad2 = pad2 / conv2.S; // S=1 -> pad2
-    int pool2_out_rows_from_pad2 = conv2_out_rows_from_pad2 / conv2.S_pool; // pad2 / 2
-
-    trim_top = (rank > 0        ) ? pool2_out_rows_from_pad2 : 0;
-    trim_bot = (rank < size - 1 ) ? pool2_out_rows_from_pad2 : 0;
-
-    if (trim_top + trim_bot >= Hp2) {
-        // Error or handle zero height case
-        if(rank==0 && Hp2 > 0) std::cerr << "ERROR: Trim amount for LRN2 exceeds pooled height!" << std::endl;
-        Hp2 = 0; // Resulting height is 0
-    }
-    int realHp2 = Hp2 - trim_top - trim_bot;
-    std::vector<float> localOut((size_t)realHp2 * Wp2 * conv2.K); // Final local output, Use size_t
-
-     if (realHp2 > 0) { // Only copy if there's data left after trimming
-        for (int r = 0; r < realHp2; ++r) {
-            size_t src_off = (size_t)(r + trim_top) * Wp2 * conv2.K;
-            size_t dst_off = (size_t)r              * Wp2 * conv2.K;
-             if (src_off + (size_t)Wp2 * conv2.K <= l2out.size() && dst_off + (size_t)Wp2 * conv2.K <= localOut.size()) {
-                 std::copy_n(l2out.data() + src_off,
-                            (size_t)Wp2 * conv2.K,
-                            localOut.data() + dst_off);
-            } else {
-                 if(rank==0) std::cerr << "ERROR: l2out copy out of bounds! r=" << r << " realHp2=" << realHp2 << " src_off=" << src_off << " dst_off=" << dst_off << std::endl;
-                 MPI_Abort(MPI_COMM_WORLD, 1);
+        // 6) Asymmetric trim of pool1_p (Corrected Logic)
+        int trim_top1 = 0, trim_bot1 = 0;
+        if (pad1 > 0 && conv1.S > 0 && conv1.S_pool > 0) {
+            int rows_affected_by_pad_after_conv1 = (pad1 + conv1.S - 1) / conv1.S;
+            int trim_amount1 = (rows_affected_by_pad_after_conv1 + conv1.S_pool - 1) / conv1.S_pool;
+            trim_top1 = (rank > 0        ) ? trim_amount1 : 0;
+            trim_bot1 = (rank < size - 1 ) ? trim_amount1 : 0;
+        }
+        if (trim_top1 + trim_bot1 >= Hp1 && Hp1 > 0) { if(rank==0) std::cerr<<"E1 "; MPI_Abort(MPI_COMM_WORLD, 1); }
+        int realHp1 = Hp1 - trim_top1 - trim_bot1;
+        std::vector<float> pool1Out((size_t)std::max(0, realHp1) * Wp1 * conv1.K);
+        if (realHp1 > 0) {
+            for (int r = 0; r < realHp1; ++r) {
+                 size_t src_off = (size_t)(r + trim_top1) * Wp1 * conv1.K; size_t dst_off = (size_t)r * Wp1 * conv1.K; size_t count = (size_t)Wp1 * conv1.K;
+                 if (src_off + count <= pool1_p.size() && dst_off + count <= pool1Out.size()) { std::copy_n(pool1_p.data() + src_off, count, pool1Out.data() + dst_off); }
+                 else { if(rank==0) std::cerr<<"E2 "; MPI_Abort(MPI_COMM_WORLD, 1); }
             }
+        } else { pool1Out.clear(); realHp1 = 0; }
+
+        // 7) Halo Exchange for Conv2
+        int C1 = conv1.K; int pad2 = conv2.F / 2; int slice2 = 0; if(pad2 > 0 && Wp1 > 0 && C1 > 0) slice2 = pad2 * Wp1 * C1;
+        std::vector<float> topHalo2(slice2), botHalo2(slice2);
+        MPI_Request send_req2_up = MPI_REQUEST_NULL, recv_req2_up = MPI_REQUEST_NULL;
+        MPI_Request send_req2_down = MPI_REQUEST_NULL, recv_req2_down = MPI_REQUEST_NULL;
+        if (pad2 > 0 && realHp1 > 0) {
+            if (rank > 0) { MPI_Irecv(topHalo2.data(), slice2, MPI_FLOAT, rank - 1, 3, MPI_COMM_WORLD, &recv_req2_up); int send_count_up = std::min(slice2, (int)pool1Out.size()); if(send_count_up > 0) MPI_Isend(pool1Out.data(), send_count_up, MPI_FLOAT, rank - 1, 2, MPI_COMM_WORLD, &send_req2_up); else send_req2_up = MPI_REQUEST_NULL;} else { std::fill(topHalo2.begin(), topHalo2.end(), 0.0f); }
+            if (rank < size - 1) { MPI_Irecv(botHalo2.data(), slice2, MPI_FLOAT, rank + 1, 2, MPI_COMM_WORLD, &recv_req2_down); size_t send_offset_down = (size_t)std::max(0, realHp1 - pad2) * Wp1 * C1; int send_count_down = std::min(slice2, (int)((size_t)realHp1*Wp1*C1 - send_offset_down)); if (send_count_down > 0) { MPI_Isend(pool1Out.data() + send_offset_down, send_count_down, MPI_FLOAT, rank + 1, 3, MPI_COMM_WORLD, &send_req2_down); } else { send_req2_down = MPI_REQUEST_NULL; } } else { std::fill(botHalo2.begin(), botHalo2.end(), 0.0f); }
+            MPI_Wait(&recv_req2_up, MPI_STATUS_IGNORE); MPI_Wait(&send_req2_up, MPI_STATUS_IGNORE); MPI_Wait(&recv_req2_down, MPI_STATUS_IGNORE); MPI_Wait(&send_req2_down, MPI_STATUS_IGNORE);
+        } else { std::fill(topHalo2.begin(), topHalo2.end(), 0.0f); std::fill(botHalo2.begin(), botHalo2.end(), 0.0f); }
+
+        int pH2 = realHp1 + 2 * pad2;
+        std::vector<float> padded2((size_t)std::max(0,pH2) * Wp1 * C1, 0.0f);
+        if (realHp1 > 0 && pool1Out.size() > 0) { // Check pool1Out not empty
+             if (pad2 > 0) {
+                 if (slice2 <= static_cast<int>(padded2.size())) std::copy(topHalo2.begin(), topHalo2.end(), padded2.begin());
+                 if (slice2 + pool1Out.size() <= padded2.size()) std::copy(pool1Out.begin(), pool1Out.end(), padded2.begin() + slice2);
+                 if (slice2 + pool1Out.size() + slice2 <= padded2.size()) std::copy(botHalo2.begin(), botHalo2.end(), padded2.begin() + slice2 + pool1Out.size());
+             } else { padded2 = pool1Out; }
         }
-    } else {
-        localOut.clear(); // Ensure empty if height is 0
-        realHp2 = 0;
-    }
 
-    // Gather sizes
-    int outCnt = (int)localOut.size(); // Convert size_t to int for MPI
-    std::vector<int> recvCnt(size);
-    MPI_Gather(&outCnt, 1, MPI_INT, recvCnt.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+        int Hc2 = convOutDim(pH2, conv2.F, conv2.P, conv2.S);
+        int Wc2 = convOutDim(Wp1, conv2.F, conv2.P, conv2.S);
+        std::vector<float> c2out((size_t)std::max(0,Hc2) * Wc2 * conv2.K);
+        serialConvLayer(c2out, padded2, conv2, pH2, Wp1, C1); // V2 uses LayerParams struct
+        serialReluLayer(c2out);
 
-    // Calculate displacements and total size on Rank 0
-    std::vector<int> recvDisp;
-    int totalFinalSize = 0;
-    if (rank == 0) {
-        recvDisp.resize(size);
-        recvDisp[0] = 0;
-        totalFinalSize = recvCnt[0];
-        for (int i = 1; i < size; ++i) {
-            recvDisp[i] = recvDisp[i-1] + recvCnt[i-1];
-            totalFinalSize += recvCnt[i];
+        int Hp2 = poolOutDim(Hc2, conv2.F_pool, conv2.S_pool);
+        int Wp2 = poolOutDim(Wc2, conv2.F_pool, conv2.S_pool);
+        std::vector<float> p2out((size_t)std::max(0,Hp2) * Wp2 * conv2.K);
+        serialMaxPoolLayer(p2out, c2out, Hc2, Wc2, conv2.K, conv2.F_pool, conv2.S_pool);
+
+        std::vector<float> l2out(p2out.size());
+        serialLRNLayer(l2out, p2out, Hp2, Wp2, conv2.K, conv2.N_lrn, conv2.alpha, conv2.beta, conv2.k_lrn);
+
+        // 8) Trim output of LRN2 (Corrected Logic)
+        int trim_top2 = 0, trim_bot2 = 0;
+        if (pad2 > 0 && conv2.S > 0 && conv2.S_pool > 0) {
+            int rows_affected_by_pad_after_conv2 = (pad2 + conv2.S - 1) / conv2.S;
+            int trim_amount2 = (rows_affected_by_pad_after_conv2 + conv2.S_pool - 1) / conv2.S_pool;
+            trim_top2 = (rank > 0        ) ? trim_amount2 : 0;
+            trim_bot2 = (rank < size - 1 ) ? trim_amount2 : 0;
         }
-        finalOut.resize(totalFinalSize); // Resize final output buffer on Rank 0
-    }
+        if (trim_top2 + trim_bot2 >= Hp2 && Hp2 > 0) { if(rank==0) std::cerr<<"E3 "; MPI_Abort(MPI_COMM_WORLD, 1); }
+        int realHp2 = Hp2 - trim_top2 - trim_bot2;
+        std::vector<float> localOut((size_t)std::max(0, realHp2) * Wp2 * conv2.K);
+         if (realHp2 > 0) {
+            for (int r = 0; r < realHp2; ++r) {
+                 size_t src_off = (size_t)(r + trim_top2) * Wp2 * conv2.K; size_t dst_off = (size_t)r * Wp2 * conv2.K; size_t count = (size_t)Wp2 * conv2.K;
+                 if (src_off + count <= l2out.size() && dst_off + count <= localOut.size()) { std::copy_n(l2out.data() + src_off, count, localOut.data() + dst_off); }
+                 else { if(rank==0) std::cerr<<"E4 "; MPI_Abort(MPI_COMM_WORLD, 1); }
+            }
+         } else { localOut.clear(); realHp2 = 0; }
 
-    // Gather final data
-    MPI_Gatherv(localOut.data(), outCnt, MPI_FLOAT,
-                finalOut.data(), recvCnt.data(), recvDisp.data(), // Rank 0 uses calculated displs
-                MPI_FLOAT, 0, MPI_COMM_WORLD);
+        // Gather sizes
+        int outCnt = static_cast<int>(localOut.size());
+        std::vector<int> recvCnt(size);
+        MPI_Gather(&outCnt, 1, MPI_INT, recvCnt.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // 9) Final detailed summary (on rank 0)
+        // Calculate displacements and total size on Rank 0
+        std::vector<int> recvDisp;
+        int totalFinalSize = 0; // Define here for rank 0 scope
+        if (rank == 0) {
+            recvDisp.resize(size); recvDisp[0] = 0; totalFinalSize = recvCnt[0];
+            for (int i = 1; i < size; ++i) { recvDisp[i] = recvDisp[i-1] + recvCnt[i-1]; totalFinalSize += recvCnt[i]; }
+            finalOut.resize(totalFinalSize);
+        }
+
+        // Gather final data
+        MPI_Gatherv(localOut.data(), outCnt, MPI_FLOAT,
+                    finalOut.data(), recvCnt.data(), recvDisp.data(),
+                    MPI_FLOAT, 0, MPI_COMM_WORLD);
+        // --- End of Scatter/Halo Path Computation ---
+    } // End else (size > 1)
+
+    // --- Barrier after all computation and gathering ---
+    MPI_Barrier(MPI_COMM_WORLD);
+    auto t_end = std::chrono::high_resolution_clock::now(); // End Timer here
+
+    // 9) Final detailed summary and time (on rank 0)
     if (rank == 0) {
-        // Verify final dimensions - total size should match finalH*finalW*finalC
-        if (totalFinalSize != (finalH * finalW * finalC)) {
-             std::cerr << "WARNING: Gathered size (" << totalFinalSize
+        // Calculate duration
+        double duration_ms = std::chrono::duration<double, std::milli>(t_end - t_start_compute).count();
+
+        // Verify final dimensions if size > 1 (check against broadcasted finalH/W/C)
+        int expectedTotalSize = finalH * finalW * finalC;
+        // Need totalFinalSize if size > 1; it's only calculated in the else block.
+        // Recalculate or retrieve totalFinalSize if needed here. Simpler: check finalOut size.
+        if (finalOut.size() != static_cast<size_t>(expectedTotalSize) && size > 1) {
+              // Note: This check might fail if finalH/W/C were incorrectly calculated initially.
+              // It's mainly a sanity check for the gather process.
+             std::cerr << "WARNING: Gathered size (" << finalOut.size()
                        << ") does not match expected final size ("
-                       << finalH << "x" << finalW << "x" << finalC << " = " << (finalH*finalW*finalC)
-                       << "). Check trim/halo logic." << std::endl;
-             // Update finalH based on gathered data if necessary, though it indicates a likely bug
-             if (finalW > 0 && finalC > 0) {
-                 finalH = totalFinalSize / (finalW * finalC);
-             } else {
-                 finalH = 0; // Avoid division by zero
-             }
+                       << finalH << "x" << finalW << "x" << finalC << " = " << expectedTotalSize
+                       << "). Check trim/halo/layer logic." << std::endl;
         }
 
-        // *** OUTPUT MODIFICATION for script compatibility ***
-        std::cout << "shape: " << finalH << "x" << finalW << "x" << finalC << std::endl; // Use lowercase "shape:"
-        std::cout << "Sample values: "; // Use "Sample values:"
+        // Print shape and sample values
+        std::cout << "shape: " << finalH << "x" << finalW << "x" << finalC << std::endl;
+        std::cout << "Sample values: ";
         int num_to_print = std::min((size_t)5, finalOut.size());
-        // Use std::fixed and std::setprecision for consistent float formatting if needed
-        // std::cout << std::fixed << std::setprecision(6);
         for (int i = 0; i < num_to_print; ++i) {
             std::cout << finalOut[i] << (i == num_to_print - 1 ? "" : " ");
         }
         std::cout << std::endl;
 
-        // Optional: Print debug info (comment out for final script run)
-        /*
-        std::cout << "\n=== Scatter+Halo Final Summary (Debug Info) ===\n";
-        std::cout << "Ranks           : " << size << "\n";
-        std::cout << "Expected Shape  : " << finalH << "x" << finalW << "x" << finalC << "\n";
-        std::cout << "Total Elements  : " << totalFinalSize << "\n";
-        std::cout << "Elements/rank   : ";
-        for (int i = 0; i < size; ++i) std::cout << recvCnt[i] << (i+1<size ? ", " : "\n");
-        std::cout << "Displacements   : ";
-        for (int i = 0; i < size; ++i) std::cout << recvDisp[i] << (i+1<size ? ", " : "\n");
-        std::cout << "Last  5 values  : ";
-        for (int i = std::max(0, totalFinalSize-5); i < totalFinalSize; ++i) std::cout << finalOut[i] << " ";
-        std::cout << "\n";
-        */
+         // Print time in expected format
+        std::cout << "Execution Time: " << duration_ms << " ms" << std::endl;
     }
 
     MPI_Finalize();
