@@ -1,5 +1,3 @@
-
-```markdown
 # CS485: GPU Cluster Programming (MPI+CUDA) - Comprehensive Repository
 
 Welcome to the official repository for CS485: GPU Cluster Programming at NJIT. This repo contains all course-related materials—homework assignments, the final project code (including our AlexNet inference implementation), automation scripts, configuration files, and supporting documentation. Our objective is to develop robust, high-performance parallel programs using MPI, CUDA, and their combination for GPU clusters.
@@ -299,17 +297,3 @@ Our workflow is designed to maximize automation while ensuring that code develop
    Upload the single `.tgz` file to Canvas. Double-check all file names and directory structures.
 4. **Grading Script Expectations:**  
    The instructor’s script will untar, compile, and run your submission with varying process counts and problem sizes. Ensure that your code is robust against invalid inputs and time constraints.
-
----
-
-## Contact and Support
-
-If you encounter issues or have questions during development:
-
-* **Course Instructor/TA:** Refer to your course webpage or contact your TA for technical help related to cluster or MPI setup.
-* **GitHub Issues:** Use the repository’s issue tracker to report bugs, request new features, or ask for clarifications.
-* **Community Resources:** Check out documentation on [NVIDIA Developer](https://developer.nvidia.com/), [MPI Forum](https://mpi-forum.org/), and related forums or Stack Overflow.
-
-Happy coding—and good luck with your high-performance computing journey in CS485!
-
-```
