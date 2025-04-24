@@ -1,20 +1,47 @@
-# Build artifacts
-build/
+# Compiled source files and executables
 *.o
 *.exe
+*.out
 template
+conv_test
 
-# Packaged homework
+# Build directories
+build/
+Build/
+build-*/ # CMake common pattern
+
+# Packaged homework/project archives
 *.tgz
+*.zip
+*.tar.gz
+*.tar.bz2
 
-# Configuration files
-config/cluster.conf
+# Configuration files (Only ignore specific instances if needed)
+# config/cluster.conf # If this IS sensitive/local, keep it ignored.
+# If it should be tracked (e.g., a template), remove the line above.
 
-# IDE specific files
-.vscode/*
-!.vscode/settings.json
-.idea/
+# Log files and directories
+logs/
+logs_extended/
+*.log
+
+# Backup directories created by scripts
+original_backup_*/
 
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# IDE specific files (Keep settings.json)
+.vscode/*
+!.vscode/settings.json
+.idea/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Other common temporary/generated files
+*~
+*.swp
+*.swo

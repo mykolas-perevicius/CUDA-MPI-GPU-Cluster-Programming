@@ -1,3 +1,4 @@
+
 ================================================================================
 
 === FILE: final_project/v1_serial/Makefile ===
@@ -581,6 +582,38 @@ void serialLRNLayer(
         }
     }
 }
+
+================================================================================
+
+=== FILE: final_project/v2_mpi_only/2.2_scatter_halo/Makefile ===
+
+# MPI‑only (Scatter+Halo) build
+CXX       := mpicxx
+CXXFLAGS  := -std=c++11 -O3 -Wall -Wextra -pedantic \
+             -Wno-cast-function-type
+LDFLAGS   := -lm
+INCLUDES  := -I./include
+
+SRCS      := src/main.cpp \
+             src/alexnet_mpi.cpp \
+             src/layers_mpi.cpp
+
+OBJS      := $(SRCS:.cpp=.o)
+TARGET    := template
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+
+%.o: %.cpp $(wildcard include/*.hpp)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+clean:
+	rm -f $(OBJS) $(TARGET)
+
 
 ================================================================================
 
@@ -1506,6 +1539,88 @@ void cudaLRNLayer(
         H,W,C,N,alpha,beta,k);
     CUDA_CHECK(cudaGetLastError());
 }
+
+
+================================================================================
+
+=== FILE: final_project/v4_mpi_cuda/Makefile ===
+
+
+
+================================================================================
+
+=== FILE: final_project/v4_mpi_cuda/include/alexnet.hpp ===
+
+*** File Not Found ***
+
+
+================================================================================
+
+=== FILE: final_project/v4_mpi_cuda/include/layers.hpp ===
+
+*** File Not Found ***
+
+
+================================================================================
+
+=== FILE: final_project/v4_mpi_cuda/src/main.cpp ===
+
+*** File Not Found ***
+
+
+================================================================================
+
+=== FILE: final_project/v4_mpi_cuda/src/alexnet_mpi_cuda.cu ===
+
+*** File Not Found ***
+
+
+================================================================================
+
+=== FILE: final_project/v4_mpi_cuda/src/layers_cuda.cu ===
+
+*** File Not Found ***
+
+
+================================================================================
+
+=== FILE: final_project/v5_cuda_aware_mpi/Makefile ===
+
+
+
+================================================================================
+
+=== FILE: final_project/v5_cuda_aware_mpi/include/alexnet.hpp ===
+
+*** File Not Found ***
+
+
+================================================================================
+
+=== FILE: final_project/v5_cuda_aware_mpi/include/layers.hpp ===
+
+*** File Not Found ***
+
+
+================================================================================
+
+=== FILE: final_project/v5_cuda_aware_mpi/src/main.cpp ===
+
+*** File Not Found ***
+
+
+================================================================================
+
+=== FILE: final_project/v5_cuda_aware_mpi/src/alexnet_mpi_cuda.cu ===
+
+*** File Not Found ***
+
+
+================================================================================
+
+=== FILE: final_project/v5_cuda_aware_mpi/src/layers_cuda.cu ===
+
+*** File Not Found ***
 
 
 ================================================================================
