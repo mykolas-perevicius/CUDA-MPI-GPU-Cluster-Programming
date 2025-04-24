@@ -1,1177 +1,81 @@
 
 ================================================================================
 
-=== FILE: final_project/v1_serial/Makefile ===
+=== FILE: final_project/v4_mpi_cuda/Makefile ===
 
-# Makefile for Serial Version (V1) - Use g++
-# Access shared data/docs using relative paths like '../data/' from src files.
+# Makefile for V4: MPI + CUDA (Host Staging)
 
-CXX = g++
-# Add -O3 for optimization, -g for debugging if needed
-CXXFLAGS = -Wall -std=c++11 -O3 #-g
-# Add -lm if using math functions like sqrt, exp etc.
-LDFLAGS = -lm
-INCLUDES = -I./include
+# Use nvcc as the primary compiler, but tell it to use mpicxx for host code compilation/linking
+NVCC       := nvcc
+CXX_MPI    := mpicxx
+# Ensure mpicxx is found if not in default PATH, e.g., export PATH=/path/to/openmpi/bin:$PATH
+# Or provide full path: CXX_MPI := /path/to/openmpi/bin/mpicxx
 
-# --- List the final .cpp source files ---
-SRCS = src/main.cpp src/alexnet_serial.cpp src/layers_serial.cpp
+NVCC_FLAGS := -std=c++11 -O3 -Xcompiler="-Wall -Wextra -Wno-unused-parameter -Wno-cast-function-type" \
+              -gencode arch=compute_75,code=compute_75 \
+              -gencode arch=compute_75,code=sm_75 \
+              -ccbin=$(CXX_MPI)
 
-OBJS = $(SRCS:.cpp=.o)
+TARGET    := template
+INCLUDES  := -I./include
 
-TARGET = template
+# --- List Source Files ---
+# .cpp files are compiled by nvcc using the C++ compiler specified by -ccbin
+SRCS_CPP  := src/main_mpi_cuda.cpp
+# .cu files are compiled by nvcc's CUDA compiler
+SRCS_CU   := src/alexnet_mpi_cuda.cu src/layers_mpi_cuda.cu
+
+OBJS      := $(SRCS_CPP:.cpp=.o) $(SRCS_CU:.cu=.o)
+
+# --- Libraries ---
+# Get MPI linker flags dynamically from mpicxx. Handle potential errors.
+MPI_LDFLAGS := $(shell $(CXX_MPI) --showme:link 2>/dev/null)
+ifeq ($(MPI_LDFLAGS),)
+    $(error "Failed to get MPI linker flags from $(CXX_MPI). Is Open MPI configured correctly?")
+endif
+# Add CUDA runtime library
+CUDA_LDFLAGS := -lcudart -lm
+
+LDFLAGS   := $(MPI_LDFLAGS) $(CUDA_LDFLAGS)
 
 .PHONY: all clean
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CXX) $(LDFLAGS) -o $@ $^ $(LDFLAGS) # Linker flags often go at the end
+# --- Compile Rules ---
+# Rule for compiling .cu files (CUDA code)
+# Use -dc for relocatable device code needed for separate compilation
+%.o: %.cu $(wildcard include/*.hpp) Makefile
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -dc $< -o $@
 
-%.o: %.cpp $(wildcard include/*.hpp) # Recompile .o if corresponding .cpp or *any* .hpp changes
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+# Rule for compiling .cpp files (Host code, using nvcc which invokes mpicxx via -ccbin)
+# No -dc needed here.
+%.o: %.cpp $(wildcard include/*.hpp) Makefile
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -c $< -o $@
+
+# --- Link Rule ---
+# Link all object files using nvcc (which uses mpicxx for final linking via -ccbin)
+# Note: Linking .o files generated with -dc requires nvcc for device linking step.
+$(TARGET): $(OBJS)
+	$(NVCC) $(NVCC_FLAGS) $(OBJS) -o $@ $(LDFLAGS)
 
 clean:
 	rm -f $(TARGET) $(OBJS)
 
 ================================================================================
 
-=== FILE: final_project/v1_serial/include/alexnet.hpp ===
+=== FILE: final_project/v4_mpi_cuda/include/alexnet.hpp ===
 
-#ifndef ALEXNET_HPP
-#define ALEXNET_HPP
-
-#include <vector>
-#include <string>
-#include <cstddef> // Include for size_t
-
-// Structure to hold layer parameters
-struct LayerParams {
-    // Convolution Params
-    std::vector<float> weights;
-    std::vector<float> biases;
-    int K, F, S, P; // K=NumFilters, F=FilterSize, S=Stride, P=Padding
-
-    // Pooling Params (Associated with the preceding Conv layer for convenience)
-    int F_pool; // Pooling Filter Size
-    int S_pool; // Pooling Stride
-
-    // LRN Params (Associated with the layer needing LRN)
-    int N_lrn;  // LRN Window Size
-    float alpha;
-    float beta;
-    float k_lrn;
-};
-
-// Corrected function prototype name
-void alexnetForwardPass(
-    std::vector<float>& input_data, // Input image data (flattened)
-    const LayerParams& paramsConv1, // Includes Pool1 params
-    const LayerParams& paramsConv2, // Includes Pool2 & LRN2 params
-    int H, int W, int C // Initial image dimensions
-);
-
-// Helper function to initialize data (e.g., random)
-void initializeData(std::vector<float>& data, size_t size);
-void initializeWeights(std::vector<float>& weights, size_t size);
-void initializeBiases(std::vector<float>& biases, size_t size);
-
-// Helper function to print dimensions (for debugging)
-void printDimensions(const std::string& layer_name, int H, int W, int C);
-
-#endif // ALEXNET_HPP
-
-================================================================================
-
-=== FILE: final_project/v1_serial/include/layers.hpp ===
-
-#ifndef LAYERS_HPP
-#define LAYERS_HPP
-
-#include <vector> // Use vectors for simplicity, or raw pointers if preferred
-
-// --- Serial Layer Function Prototypes ---
-
-// Naive Serial Convolution Layer
-void serialConvLayer(
-    std::vector<float>& output,
-    const std::vector<float>& input,
-    const std::vector<float>& weights,
-    const std::vector<float>& biases, // Added biases
-    int H, int W, int C, // Input dimensions (Height, Width, Channels)
-    int K, // Number of filters (Output channels)
-    int F, // Filter size (FxF)
-    int S, // Stride
-    int P  // Padding
-);
-
-// Serial ReLU Activation Layer (in-place or out-of-place)
-void serialReluLayer(std::vector<float>& data); // Example: In-place
-
-// Serial Max Pooling Layer
-void serialMaxPoolLayer(
-    std::vector<float>& output,
-    const std::vector<float>& input,
-    int H, int W, int C, // Input dimensions
-    int F, // Filter size (pooling window size)
-    int S  // Stride
-);
-
-// Serial Local Response Normalization (LRN) Layer
-void serialLRNLayer(
-    std::vector<float>& output,
-    const std::vector<float>& input,
-    int H, int W, int C, // Input dimensions
-    int N,        // Size of the normalization window (across channels)
-    float alpha,  // LRN parameter
-    float beta,   // LRN parameter
-    float k       // LRN parameter
-);
-
-#endif // LAYERS_HPP
-
-================================================================================
-
-=== FILE: final_project/v1_serial/src/main.cpp ===
-
-#include <iostream>
-#include <vector>
-#include <cstdlib> // For rand(), srand()
-#include <ctime>   // For time()
-#include <stdexcept> // For exceptions
-#include <cstddef> // Include for size_t
-
-#include "alexnet.hpp" // Include the header for the forward pass function
-
-int main(int argc, char* argv[]) {
-    // --- Basic Setup ---
-    srand(time(0)); // Seed random number generator
-
-    std::cout << "--- AlexNet Serial CPU Version (V1) ---" << std::endl;
-
-    // --- Define Network Dimensions and Parameters (EXAMPLE VALUES) ---
-    // Input Image
-    int H = 227, W = 227, C = 3; // Example AlexNet input size
-
-    // Conv1 Parameters
-    LayerParams paramsConv1;
-    paramsConv1.K = 96;  // Num filters
-    paramsConv1.F = 11;  // Filter size
-    paramsConv1.S = 4;   // Stride
-    paramsConv1.P = 0;   // Padding
-    // Pool1 (often associated with Conv1 params)
-    paramsConv1.F_pool = 3;
-    paramsConv1.S_pool = 2;
-
-    // Conv2 Parameters
-    LayerParams paramsConv2;
-    paramsConv2.K = 256; // Num filters
-    paramsConv2.F = 5;   // Filter size
-    paramsConv2.S = 1;   // Stride
-    paramsConv2.P = 2;   // Padding
-    // Pool2
-    paramsConv2.F_pool = 3;
-    paramsConv2.S_pool = 2;
-    // LRN2
-    paramsConv2.N_lrn = 5;
-    paramsConv2.alpha = 0.0001f;
-    paramsConv2.beta = 0.75f;
-    paramsConv2.k_lrn = 2.0f;
-
-
-    // --- Allocate and Initialize Data & Weights (Host Memory) ---
-    std::cout << "Initializing data and parameters..." << std::endl;
-
-    // Input Data
-    std::vector<float> h_inputData;
-    initializeData(h_inputData, static_cast<size_t>(H) * W * C); // Use size_t
-
-    // Conv1 Weights & Biases
-    initializeWeights(paramsConv1.weights, static_cast<size_t>(paramsConv1.K) * C * paramsConv1.F * paramsConv1.F);
-    initializeBiases(paramsConv1.biases, static_cast<size_t>(paramsConv1.K));
-
-
-    // Conv2 Weights & Biases
-    // Input channels to Conv2 is output channels of Conv1/Pool1
-    int C_conv2_input = paramsConv1.K;
-    initializeWeights(paramsConv2.weights, static_cast<size_t>(paramsConv2.K) * C_conv2_input * paramsConv2.F * paramsConv2.F);
-    initializeBiases(paramsConv2.biases, static_cast<size_t>(paramsConv2.K));
-
-    std::cout << "Initialization complete." << std::endl;
-
-
-    // --- Perform Forward Pass ---
-    try {
-        alexnetForwardPass(h_inputData, paramsConv1, paramsConv2, H, W, C);
-    } catch (const std::exception& e) {
-        std::cerr << "Error during forward pass: " << e.what() << std::endl;
-        return 1;
-    }
-
-    std::cout << "--- Serial execution finished ---" << std::endl;
-
-    return 0;
-}
-
-================================================================================
-
-=== FILE: final_project/v1_serial/src/alexnet_serial.cpp ===
+// final_project/v4_mpi_cuda/include/alexnet.hpp
+#ifndef ALEXNET_MPI_CUDA_HPP
+#define ALEXNET_MPI_CUDA_HPP
 
 #include <vector>
-#include <iostream>
-#include <chrono>    // For timing
-#include <algorithm> // For std::min, std::swap
-#include <cmath>     // For std::max, std::pow // LRN might use pow
-#include <string>    // For std::string
-#include <cstdlib>   // For rand(), RAND_MAX
-#include <cstddef>   // For size_t
-#include <limits>    // For numeric_limits if needed by layers
-
-// Include necessary headers ONCE correctly
-#include "../include/alexnet.hpp" // Correct relative path for LayerParams
-#include "../include/layers.hpp"  // Correct relative path for serial layer functions
-
-// --- Helper function definitions belong here (or a separate utils.cpp) ---
-// --- DO NOT duplicate these definitions in layers_serial.cpp ---
-
-// Helper to calculate output dimensions (using reference parameters)
-void calculate_conv_output_dims(int& outH, int& outW, int H, int W, int F, int S, int P) {
-    if (S <= 0) {
-        std::cerr << "Error: Stride (S) must be positive." << std::endl;
-        outH = 0; outW = 0; return;
-    }
-    outH = (H - F + 2 * P) / S + 1;
-    outW = (W - F + 2 * P) / S + 1;
-}
-
-// Helper to calculate pooling output dimensions
-void calculate_pool_output_dims(int& outH, int& outW, int H, int W, int F, int S) {
-    if (S <= 0) {
-        std::cerr << "Error: Stride (S) must be positive." << std::endl;
-        outH = 0; outW = 0; return;
-    }
-    outH = (H - F) / S + 1; // Standard pooling, assumes P=0
-    outW = (W - F) / S + 1;
-}
-
-// Helper to initialize input data
-void initializeData(std::vector<float>& data, size_t size) {
-    data.resize(size);
-    for (size_t i = 0; i < size; ++i) {
-        data[i] = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.1f;
-    }
-}
-
-// Helper to initialize weights
-void initializeWeights(std::vector<float>& weights, size_t size) {
-     weights.resize(size);
-    for (size_t i = 0; i < size; ++i) {
-        weights[i] = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX) - 0.5f) * 0.02f;
-    }
-}
-
-// Helper to initialize biases
-void initializeBiases(std::vector<float>& biases, size_t size) {
-    biases.assign(size, 0.1f);
-}
-
-// Helper to print dimensions
-void printDimensions(const std::string& layer_name, int H, int W, int C) {
-    std::cout << "  [" << layer_name << "] Dimensions: H=" << H << ", W=" << W << ", C=" << C << std::endl;
-}
-
-// --- AlexNet Forward Pass Implementation ---
-// --- Definition belongs ONLY here ---
-
-void alexnetForwardPass(
-    std::vector<float>& input_data,
-    const LayerParams& paramsConv1,
-    const LayerParams& paramsConv2,
-    int H, int W, int C)
-{
-    std::cout << "Starting AlexNet Serial Forward Pass..." << std::endl;
-    auto start_time = std::chrono::high_resolution_clock::now();
-
-    std::vector<float> buffer1, buffer2;
-    std::vector<float>* current_input = &input_data;
-    std::vector<float>* current_output = &buffer1;
-    current_output->clear();
-
-    int currentH = H;
-    int currentW = W;
-    int currentC = C;
-    int nextH, nextW, nextC;
-
-    // --- Block 1 ---
-    printDimensions("Input", currentH, currentW, currentC);
-
-    // Conv1
-    std::cout << "Applying Conv1..." << std::endl;
-    calculate_conv_output_dims(nextH, nextW, currentH, currentW, paramsConv1.F, paramsConv1.S, paramsConv1.P);
-    nextC = paramsConv1.K;
-    size_t next_size_conv1 = static_cast<size_t>(nextH) * nextW * nextC; // Cast first dim to size_t
-    current_output->resize(next_size_conv1);
-    serialConvLayer(*current_output, *current_input, paramsConv1.weights, paramsConv1.biases,
-                    currentH, currentW, currentC, paramsConv1.K, paramsConv1.F, paramsConv1.S, paramsConv1.P);
-    std::swap(current_input, current_output);
-    currentH = nextH; currentW = nextW; currentC = nextC;
-    printDimensions("After Conv1", currentH, currentW, currentC);
-
-    // ReLU1
-    std::cout << "Applying ReLU1..." << std::endl;
-    serialReluLayer(*current_input);
-    printDimensions("After ReLU1", currentH, currentW, currentC);
-
-    // Pool1
-    std::cout << "Applying MaxPool1..." << std::endl;
-    calculate_pool_output_dims(nextH, nextW, currentH, currentW, paramsConv1.F_pool, paramsConv1.S_pool);
-    nextC = currentC;
-    size_t next_size_pool1 = static_cast<size_t>(nextH) * nextW * nextC;
-    current_output->resize(next_size_pool1);
-    serialMaxPoolLayer(*current_output, *current_input,
-                       currentH, currentW, currentC, paramsConv1.F_pool, paramsConv1.S_pool);
-    std::swap(current_input, current_output);
-    currentH = nextH; currentW = nextW; currentC = nextC;
-    printDimensions("After Pool1", currentH, currentW, currentC);
-
-    // --- Block 2 ---
-
-    // Conv2
-    std::cout << "Applying Conv2..." << std::endl;
-    calculate_conv_output_dims(nextH, nextW, currentH, currentW, paramsConv2.F, paramsConv2.S, paramsConv2.P);
-    nextC = paramsConv2.K;
-    size_t next_size_conv2 = static_cast<size_t>(nextH) * nextW * nextC;
-    // Resize buffer if necessary
-    if (current_output->size() != next_size_conv2) {
-         current_output->resize(next_size_conv2);
-    }
-    serialConvLayer(*current_output, *current_input, paramsConv2.weights, paramsConv2.biases,
-                    currentH, currentW, currentC, paramsConv2.K, paramsConv2.F, paramsConv2.S, paramsConv2.P);
-    std::swap(current_input, current_output);
-    currentH = nextH; currentW = nextW; currentC = nextC;
-    printDimensions("After Conv2", currentH, currentW, currentC);
-
-    // ReLU2
-    std::cout << "Applying ReLU2..." << std::endl;
-    serialReluLayer(*current_input);
-    printDimensions("After ReLU2", currentH, currentW, currentC);
-
-    // Pool2
-    std::cout << "Applying MaxPool2..." << std::endl;
-    calculate_pool_output_dims(nextH, nextW, currentH, currentW, paramsConv2.F_pool, paramsConv2.S_pool);
-    nextC = currentC;
-    size_t next_size_pool2 = static_cast<size_t>(nextH) * nextW * nextC;
-    if (current_output->size() != next_size_pool2) {
-        current_output->resize(next_size_pool2);
-    }
-    serialMaxPoolLayer(*current_output, *current_input,
-                       currentH, currentW, currentC, paramsConv2.F_pool, paramsConv2.S_pool);
-    std::swap(current_input, current_output);
-    currentH = nextH; currentW = nextW; currentC = nextC;
-    printDimensions("After Pool2", currentH, currentW, currentC);
-
-    // LRN2
-    std::cout << "Applying LRN2..." << std::endl;
-    nextH = currentH; nextW = currentW; nextC = currentC; // LRN doesn't change dimensions
-    size_t next_size_lrn2 = static_cast<size_t>(nextH) * nextW * nextC;
-    if (current_output->size() != next_size_lrn2) {
-        current_output->resize(next_size_lrn2);
-    }
-    serialLRNLayer(*current_output, *current_input,
-                   currentH, currentW, currentC, paramsConv2.N_lrn, paramsConv2.alpha, paramsConv2.beta, paramsConv2.k_lrn);
-    std::swap(current_input, current_output);
-    printDimensions("After LRN2", currentH, currentW, currentC);
-
-    // --- Copy final result back to input_data if necessary ---
-    if (current_input != &input_data) {
-         std::cout << "Copying final result back to original buffer..." << std::endl;
-         input_data = *current_input; // Vector assignment handles copy/resize
-    } else {
-         std::cout << "Final result is already in the original buffer." << std::endl;
-    }
-
-    auto end_time = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-    std::cout << "AlexNet Serial Forward Pass completed in " << duration.count() << " ms" << std::endl;
-
-    // Output first few values
-    std::cout << "Final Output (first 10 values): ";
-    // Use size_t for loop counter when comparing with vector::size()
-    size_t print_count = std::min(static_cast<size_t>(10), input_data.size());
-    for(size_t i = 0; i < print_count; ++i) {
-        std::cout << input_data[i] << (i == print_count - 1 ? "" : " ");
-    }
-    std::cout << (input_data.size() > 10 ? "..." : "") << std::endl;
-}
-
-================================================================================
-
-=== FILE: final_project/v1_serial/src/layers_serial.cpp ===
-
-#include <vector>
-#include <cmath>     // For std::max, std::pow, std::fmax? (check usage)
-#include <algorithm> // For std::max, std::min
-#include <limits>    // For std::numeric_limits
-#include <cstddef>   // For size_t
-#include <iostream>  // For error checking (optional)
-
-// Include necessary headers
-#include "layers.hpp"  // Should declare the functions being implemented here
-#include "alexnet.hpp" // Needed for LayerParams if used directly (conv layer signature needs adjustment)
-
-// --- 3D Index Helper ---
-// Make it static or put in an anonymous namespace if only used in this file
-namespace { // Anonymous namespace limits scope to this file
-    inline size_t idx3D(int h, int w, int c, int W, int C) {
-        // Add checks for h, w, c boundaries if needed for robustness
-        return (static_cast<size_t>(h) * W + w) * C + c;
-    }
-    // Helper to calculate output dimensions (needed by layers implementation)
-    // Can be defined here (static/anon namespace) or declared in layers.hpp and defined once elsewhere.
-    // Let's keep it local here for now.
-    inline int calculateConvOutputDim(int D, int F, int P, int S) {
-        if (S <= 0) return 0; // Avoid division by zero
-        return (D - F + 2 * P) / S + 1;
-    }
-    inline int calculatePoolOutputDim(int D, int F, int S) {
-        if (S <= 0) return 0; // Avoid division by zero
-        return (D - F) / S + 1; // Assumes P=0 for pool
-    }
-} // End anonymous namespace
-
-
-// --- Serial Layer Function Implementations ---
-
-// Naive Serial Convolution Layer
-// Signature matches layers.hpp
-void serialConvLayer(
-    std::vector<float>& output,
-    const std::vector<float>& input,
-    const std::vector<float>& weights,
-    const std::vector<float>& biases,
-    int H, int W, int C,
-    int K, int F, int S, int P)
-{
-    int Ho = calculateConvOutputDim(H, F, P, S);
-    int Wo = calculateConvOutputDim(W, F, P, S);
-
-    // Pre-check output size (optional but good practice)
-    if (output.size() != static_cast<size_t>(Ho) * Wo * K) {
-         std::cerr << "Warning: Output vector size mismatch in serialConvLayer. Resizing." << std::endl;
-         output.resize(static_cast<size_t>(Ho) * Wo * K);
-    }
-
-    // Parallelizing this loop is the main goal of MPI/CUDA versions
-    for (int k = 0; k < K; ++k) { // For each output channel (filter)
-        for (int ho = 0; ho < Ho; ++ho) { // For each output row
-            for (int wo = 0; wo < Wo; ++wo) { // For each output column
-                float sum = biases[k]; // Start with bias
-                // Apply filter
-                for (int c = 0; c < C; ++c) { // For each input channel
-                    for (int fh = 0; fh < F; ++fh) { // For each filter row
-                        for (int fw = 0; fw < F; ++fw) { // For each filter column
-                            int hi = ho * S - P + fh; // Input row index
-                            int wi = wo * S - P + fw; // Input column index
-
-                            // Check bounds (convolution with padding)
-                            if (hi >= 0 && hi < H && wi >= 0 && wi < W) {
-                                size_t input_idx = idx3D(hi, wi, c, W, C);
-                                // Weight index: OutputChannel(k), InputChannel(c), FilterRow(fh), FilterCol(fw)
-                                size_t weight_idx = (((static_cast<size_t>(k) * C + c) * F + fh) * F) + fw;
-                                sum += input[input_idx] * weights[weight_idx];
-                            }
-                            // else: contribution is 0 (implicitly, due to padding)
-                        }
-                    }
-                }
-                output[idx3D(ho, wo, k, Wo, K)] = sum; // Store result
-            }
-        }
-    }
-}
-
-// Serial ReLU Activation Layer (in-place)
-// Signature matches layers.hpp
-void serialReluLayer(std::vector<float>& data) {
-    for (float& val : data) {
-        val = std::max(0.0f, val);
-    }
-    // Can be optimized using std::transform or OpenMP for trivial parallelization on CPU
-}
-
-// Serial Max Pooling Layer
-// Signature matches layers.hpp
-void serialMaxPoolLayer(
-    std::vector<float>& output,
-    const std::vector<float>& input,
-    int H, int W, int C,
-    int F, // Filter size (pooling window size)
-    int S) // Stride
-{
-    int Ho = calculatePoolOutputDim(H, F, S);
-    int Wo = calculatePoolOutputDim(W, F, S);
-
-    // Pre-check output size
-     if (output.size() != static_cast<size_t>(Ho) * Wo * C) {
-         std::cerr << "Warning: Output vector size mismatch in serialMaxPoolLayer. Resizing." << std::endl;
-         output.resize(static_cast<size_t>(Ho) * Wo * C);
-     }
-
-    for (int c = 0; c < C; ++c) { // For each channel (pooling is usually done per-channel)
-        for (int ho = 0; ho < Ho; ++ho) {
-            for (int wo = 0; wo < Wo; ++wo) {
-                float max_val = -std::numeric_limits<float>::infinity();
-                // Find max in the FxF window
-                for (int fh = 0; fh < F; ++fh) {
-                    for (int fw = 0; fw < F; ++fw) {
-                        int hi = ho * S + fh;
-                        int wi = wo * S + fw;
-                        // Bounds check (should ideally not be needed if Ho, Wo calculated correctly)
-                        if (hi >= 0 && hi < H && wi >= 0 && wi < W) {
-                            max_val = std::max(max_val, input[idx3D(hi, wi, c, W, C)]);
-                        }
-                    }
-                }
-                output[idx3D(ho, wo, c, Wo, C)] = max_val;
-            }
-        }
-    }
-}
-
-// Serial Local Response Normalization (LRN) Layer
-// Signature matches layers.hpp
-void serialLRNLayer(
-    std::vector<float>& output,
-    const std::vector<float>& input,
-    int H, int W, int C,
-    int N, float alpha, float beta, float k)
-{
-     // Pre-check output size
-     if (output.size() != input.size()) {
-         std::cerr << "Warning: Output vector size mismatch in serialLRNLayer. Resizing." << std::endl;
-         output.resize(input.size());
-     }
-     if (N <= 0) {
-         std::cerr << "Error: LRN window size (N) must be positive." << std::endl;
-         // Optionally copy input to output or handle error differently
-         std::copy(input.begin(), input.end(), output.begin());
-         return;
-     }
-
-    int half_N = N / 2;
-    float alpha_over_N = alpha / static_cast<float>(N); // Precompute
-
-    for (int h = 0; h < H; ++h) {
-        for (int w = 0; w < W; ++w) {
-            for (int c = 0; c < C; ++c) { // For each channel at this (h, w) position
-                // Calculate the sum of squares across the channel window
-                float sum_sq = 0.0f;
-                int c_start = std::max(0, c - half_N);
-                int c_end = std::min(C - 1, c + half_N);
-                for (int i = c_start; i <= c_end; ++i) {
-                    float val = input[idx3D(h, w, i, W, C)];
-                    sum_sq += val * val;
-                }
-
-                // Calculate the normalization factor
-                float norm_factor = std::pow(k + alpha_over_N * sum_sq, beta);
-
-                // Apply normalization
-                size_t current_idx = idx3D(h, w, c, W, C);
-                output[current_idx] = input[current_idx] / norm_factor;
-            }
-        }
-    }
-}
-
-================================================================================
-
-=== FILE: final_project/v2_mpi_only/2.2_scatter_halo/Makefile ===
-
-# MPI‑only (Scatter+Halo) build
-CXX       := mpicxx
-CXXFLAGS  := -std=c++11 -O3 -Wall -Wextra -pedantic \
-             -Wno-cast-function-type
-LDFLAGS   := -lm
-INCLUDES  := -I./include
-
-SRCS      := src/main.cpp \
-             src/alexnet_mpi.cpp \
-             src/layers_mpi.cpp
-
-OBJS      := $(SRCS:.cpp=.o)
-TARGET    := template
-
-.PHONY: all clean
-
-all: $(TARGET)
-
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
-
-%.o: %.cpp $(wildcard include/*.hpp)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
-
-clean:
-	rm -f $(OBJS) $(TARGET)
-
-
-================================================================================
-
-=== FILE: final_project/v2_mpi_only/2.2_scatter_halo/include/alexnet.hpp ===
-
-#pragma once
-#include <vector>
-
-/* -------- Layer hyper‑parameters -------- */
-struct LayerParams {
-    std::vector<float> weights;   // flattened (K x C x F x F)
-    std::vector<float> biases;    // length K
-    int K = 0;    // # filters / output channels
-    int F = 0;    // filter size
-    int S = 1;    // stride
-    int P = 0;    // padding
-
-    /* pool */
-    int F_pool  = 0;  // pool window
-    int S_pool  = 1;  // pool stride
-
-    /* local response norm */
-    int   N_lrn = 0;
-    float alpha = 0.0f;
-    float beta  = 0.0f;
-    float k_lrn = 1.0f;
-};
-
-/* --------------- API --------------- */
-// Needs definition in alexnet_mpi.cpp
-void alexnetForwardPassMPI(std::vector<float>& input,
-                           const LayerParams& conv1,
-                           const LayerParams& conv2,
-                           int H, int W, int C,
-                           std::vector<float>& output);
-
-/* -------- Helpers -------- */
-// Defined inline so they can be included in multiple places without linker errors
-
-inline int convOutDim(int dim, int F, int P, int S) {
-    if (S <= 0) return 0; // Avoid division by zero
-    return (dim - F + 2 * P) / S + 1;
-}
-
-// *** ADD THIS INLINE DEFINITION ***
-inline int poolOutDim(int dim, int F, int S) {
-    if (S <= 0) return 0; // Avoid division by zero
-    return (dim - F) / S + 1; // Assumes P=0 for pooling
-}
-
-================================================================================
-
-=== FILE: final_project/v2_mpi_only/2.2_scatter_halo/include/layers.hpp ===
-
-#pragma once
-#include <vector>
-#include "alexnet.hpp"
-
-/* ----- layer kernels (CPU, identical to V1 serial) ----- */
-void serialConvLayer(std::vector<float>& out,
-                     const std::vector<float>& in,
-                     const LayerParams& p,
-                     int H, int W, int C);
-
-void serialReluLayer(std::vector<float>& data);
-
-void serialMaxPoolLayer(std::vector<float>& out,
-                        const std::vector<float>& in,
-                        int H, int W, int C,
-                        int F_pool, int S_pool);
-
-void serialLRNLayer(std::vector<float>& out,
-                    const std::vector<float>& in,
-                    int H, int W, int C,
-                    int N, float alpha, float beta, float k);
-
-
-================================================================================
-
-=== FILE: final_project/v2_mpi_only/2.2_scatter_halo/src/main.cpp ===
-
-// final_project/v2_mpi_only/2.2_scatter_halo/src/main.cpp
-#include <mpi.h>
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <numeric>
-#include <iomanip> // For std::fixed, std::setprecision if needed
-#include <cmath>   // Needed for std::max
-#include <chrono>  // For timing
-
-#include "../include/alexnet.hpp" // Includes LayerParams and inline helpers
-#include "../include/layers.hpp"  // Includes serial layer function prototypes
-
-// 3D index helper (local definition ok)
-inline size_t idx3D(int h, int w, int c, int W, int C) {
-    // Add checks for h, w, c boundaries if needed for robustness
-    return (static_cast<size_t>(h) * W + w) * C + c;
-}
-
-// Note: convOutDim and poolOutDim are now defined inline in alexnet.hpp
-
-
-int main(int argc, char** argv) {
-    MPI_Init(&argc, &argv);
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    // 1) Common setup
-    int H = 227, W = 227, C = 3;
-    LayerParams conv1, conv2;
-    std::vector<float> input, finalOut;
-    int finalH = -1, finalW = -1, finalC = -1;
-
-    if (rank == 0) {
-        // initialize input & params
-        input.assign((size_t)H * W * C, 1.0f);
-        conv1.K = 96; conv1.F = 11; conv1.S = 4; conv1.P = 0;
-        conv1.F_pool = 3; conv1.S_pool = 2;
-        conv1.weights.assign((size_t)conv1.K * C * conv1.F * conv1.F, 0.01f);
-        conv1.biases.assign(conv1.K, 0.0f);
-        conv2.K = 256; conv2.F = 5; conv2.S = 1; conv2.P = 2;
-        conv2.F_pool = 3; conv2.S_pool = 2;
-        conv2.N_lrn = 5; conv2.alpha = 1e-4f; conv2.beta = 0.75f; conv2.k_lrn = 2.0f;
-        int C_conv2_input = conv1.K;
-        conv2.weights.assign((size_t)conv2.K * C_conv2_input * conv2.F * conv2.F, 0.01f);
-        conv2.biases.assign(conv2.K, 0.0f);
-
-        // Calculate expected final dimensions (using inline helpers from alexnet.hpp)
-        int H1 = convOutDim(H, conv1.F, conv1.P, conv1.S);
-        int W1 = convOutDim(W, conv1.F, conv1.P, conv1.S);
-        H1 = poolOutDim(H1, conv1.F_pool, conv1.S_pool);
-        W1 = poolOutDim(W1, conv1.F_pool, conv1.S_pool);
-        int H2 = convOutDim(H1, conv2.F, conv2.P, conv2.S);
-        int W2 = convOutDim(W1, conv2.F, conv2.P, conv2.S);
-        H2 = poolOutDim(H2, conv2.F_pool, conv2.S_pool);
-        W2 = poolOutDim(W2, conv2.F_pool, conv2.S_pool);
-        finalH = H2; finalW = W2; finalC = conv2.K;
-    }
-
-    // 2) Broadcast sizes & params
-    auto bcastInt = [&](int& x){ MPI_Bcast(&x,1,MPI_INT,0,MPI_COMM_WORLD); };
-    bcastInt(H); bcastInt(W); bcastInt(C);
-    bcastInt(conv1.K); bcastInt(conv1.F); bcastInt(conv1.S); bcastInt(conv1.P);
-    bcastInt(conv1.F_pool); bcastInt(conv1.S_pool);
-    bcastInt(conv2.K); bcastInt(conv2.F); bcastInt(conv2.S); bcastInt(conv2.P);
-    bcastInt(conv2.F_pool); bcastInt(conv2.S_pool);
-    bcastInt(conv2.N_lrn);
-    bcastInt(finalH); bcastInt(finalW); bcastInt(finalC);
-
-    if (rank != 0) {
-        input.resize((size_t)H * W * C);
-        conv1.weights.resize((size_t)conv1.K * C * conv1.F * conv1.F);
-        conv1.biases.resize(conv1.K);
-        int C_conv2_input = conv1.K;
-        conv2.weights.resize((size_t)conv2.K * C_conv2_input * conv2.F * conv2.F);
-        conv2.biases.resize(conv2.K);
-    }
-    float lrnArr[3];
-    if (rank == 0) { lrnArr[0] = conv2.alpha; lrnArr[1] = conv2.beta; lrnArr[2] = conv2.k_lrn; }
-    MPI_Bcast(lrnArr,3,MPI_FLOAT,0,MPI_COMM_WORLD);
-    if (rank != 0) { conv2.alpha = lrnArr[0]; conv2.beta = lrnArr[1]; conv2.k_lrn = lrnArr[2]; }
-    MPI_Bcast(input.data(),           static_cast<int>(input.size()),           MPI_FLOAT,0,MPI_COMM_WORLD);
-    MPI_Bcast(conv1.weights.data(),   static_cast<int>(conv1.weights.size()),   MPI_FLOAT,0,MPI_COMM_WORLD);
-    MPI_Bcast(conv1.biases.data(),    static_cast<int>(conv1.biases.size()),    MPI_FLOAT,0,MPI_COMM_WORLD);
-    MPI_Bcast(conv2.weights.data(),   static_cast<int>(conv2.weights.size()),   MPI_FLOAT,0,MPI_COMM_WORLD);
-    MPI_Bcast(conv2.biases.data(),    static_cast<int>(conv2.biases.size()),    MPI_FLOAT,0,MPI_COMM_WORLD);
-
-    // --- Barrier before starting main computation (optional) ---
-    MPI_Barrier(MPI_COMM_WORLD);
-    auto t_start_compute = std::chrono::high_resolution_clock::now(); // *** Start Compute Timer ***
-
-    // Path A: broadcast-all if only one rank (np=1 case)
-    if (size == 1) {
-        // Definition is in alexnet_mpi.cpp
-        alexnetForwardPassMPI(input, conv1, conv2, H, W, C, finalOut);
-    }
-    // Path B: scatter + halo (np > 1 case)
-    else {
-        // 3) Scatter input
-        std::vector<int> sendCnt(size), sendDisp(size);
-        int base = H / size, rem = H % size;
-        if (rank == 0) {
-            sendDisp[0] = 0;
-            for (int i = 0; i < size; ++i) {
-                int rows = base + (i < rem ? 1 : 0);
-                sendCnt[i]  = rows * W * C;
-                if (i > 0) { sendDisp[i] = sendDisp[i - 1] + sendCnt[i - 1]; }
-            }
-        }
-        int localCnt;
-        MPI_Scatter(sendCnt.data(), 1, MPI_INT, &localCnt, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        std::vector<float> localIn(localCnt);
-        MPI_Scatterv(input.data(), sendCnt.data(), sendDisp.data(), MPI_FLOAT,
-                     localIn.data(), localCnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
-        int localH = (W*C > 0) ? localCnt / (W * C) : 0;
-
-        // 4) Halo for Conv1
-        const int pad1 = conv1.F / 2;
-        int slice1 = 0; if (pad1 > 0 && W > 0 && C > 0) slice1 = pad1 * W * C;
-        std::vector<float> topHalo(slice1), botHalo(slice1);
-        MPI_Request send_req_up = MPI_REQUEST_NULL, recv_req_up = MPI_REQUEST_NULL;
-        MPI_Request send_req_down = MPI_REQUEST_NULL, recv_req_down = MPI_REQUEST_NULL;
-        if (pad1 > 0) {
-            if (rank > 0) {
-                MPI_Irecv(topHalo.data(), slice1, MPI_FLOAT, rank - 1, 1, MPI_COMM_WORLD, &recv_req_up);
-                MPI_Isend(localIn.data(), slice1, MPI_FLOAT, rank - 1, 0, MPI_COMM_WORLD, &send_req_up);
-            } else { std::fill(topHalo.begin(), topHalo.end(), 0.0f); }
-            if (rank < size - 1) {
-                MPI_Irecv(botHalo.data(), slice1, MPI_FLOAT, rank + 1, 0, MPI_COMM_WORLD, &recv_req_down);
-                MPI_Isend(localIn.data() + (size_t)std::max(0, localH - pad1) * W * C, slice1, MPI_FLOAT, rank + 1, 1, MPI_COMM_WORLD, &send_req_down);
-            } else { std::fill(botHalo.begin(), botHalo.end(), 0.0f); }
-            MPI_Wait(&recv_req_up, MPI_STATUS_IGNORE); MPI_Wait(&send_req_up, MPI_STATUS_IGNORE);
-            MPI_Wait(&recv_req_down, MPI_STATUS_IGNORE); MPI_Wait(&send_req_down, MPI_STATUS_IGNORE);
-        }
-
-        // 5) Conv1 → ReLU1 → Pool1
-        int pH1 = localH + 2 * pad1;
-        std::vector<float> padded1((size_t)std::max(0,pH1) * W * C);
-        if (pad1 > 0 && localIn.size() > 0) { // Check localIn isn't empty
-             if (slice1 <= static_cast<int>(padded1.size())) std::copy(topHalo.begin(), topHalo.end(), padded1.begin());
-             if (slice1 + localIn.size() <= padded1.size()) std::copy(localIn.begin(), localIn.end(), padded1.begin() + slice1);
-             if (slice1 + localIn.size() + slice1 <= padded1.size()) std::copy(botHalo.begin(), botHalo.end(), padded1.begin() + slice1 + localIn.size());
-        } else { padded1 = localIn; }
-
-        int Hc1 = convOutDim(pH1, conv1.F, conv1.P, conv1.S);
-        int Wc1 = convOutDim(W,   conv1.F, conv1.P, conv1.S);
-        std::vector<float> c1out((size_t)std::max(0,Hc1) * Wc1 * conv1.K);
-        // Ensure layers are defined (layers_mpi.cpp) - V2 uses different layer signatures!
-        serialConvLayer(c1out, padded1, conv1, pH1, W, C); // V2 uses LayerParams struct
-        serialReluLayer(c1out);
-
-        int Hp1 = poolOutDim(Hc1, conv1.F_pool, conv1.S_pool);
-        int Wp1 = poolOutDim(Wc1, conv1.F_pool, conv1.S_pool);
-        std::vector<float> pool1_p((size_t)std::max(0,Hp1) * Wp1 * conv1.K);
-        serialMaxPoolLayer(pool1_p, c1out, Hc1, Wc1, conv1.K, conv1.F_pool, conv1.S_pool);
-
-
-        // 6) Asymmetric trim of pool1_p (Corrected Logic)
-        int trim_top1 = 0, trim_bot1 = 0;
-        if (pad1 > 0 && conv1.S > 0 && conv1.S_pool > 0) {
-            int rows_affected_by_pad_after_conv1 = (pad1 + conv1.S - 1) / conv1.S;
-            int trim_amount1 = (rows_affected_by_pad_after_conv1 + conv1.S_pool - 1) / conv1.S_pool;
-            trim_top1 = (rank > 0        ) ? trim_amount1 : 0;
-            trim_bot1 = (rank < size - 1 ) ? trim_amount1 : 0;
-        }
-        if (trim_top1 + trim_bot1 >= Hp1 && Hp1 > 0) { if(rank==0) std::cerr<<"E1 "; MPI_Abort(MPI_COMM_WORLD, 1); }
-        int realHp1 = Hp1 - trim_top1 - trim_bot1;
-        std::vector<float> pool1Out((size_t)std::max(0, realHp1) * Wp1 * conv1.K);
-        if (realHp1 > 0) {
-            for (int r = 0; r < realHp1; ++r) {
-                 size_t src_off = (size_t)(r + trim_top1) * Wp1 * conv1.K; size_t dst_off = (size_t)r * Wp1 * conv1.K; size_t count = (size_t)Wp1 * conv1.K;
-                 if (src_off + count <= pool1_p.size() && dst_off + count <= pool1Out.size()) { std::copy_n(pool1_p.data() + src_off, count, pool1Out.data() + dst_off); }
-                 else { if(rank==0) std::cerr<<"E2 "; MPI_Abort(MPI_COMM_WORLD, 1); }
-            }
-        } else { pool1Out.clear(); realHp1 = 0; }
-
-        // 7) Halo Exchange for Conv2
-        int C1 = conv1.K; int pad2 = conv2.F / 2; int slice2 = 0; if(pad2 > 0 && Wp1 > 0 && C1 > 0) slice2 = pad2 * Wp1 * C1;
-        std::vector<float> topHalo2(slice2), botHalo2(slice2);
-        MPI_Request send_req2_up = MPI_REQUEST_NULL, recv_req2_up = MPI_REQUEST_NULL;
-        MPI_Request send_req2_down = MPI_REQUEST_NULL, recv_req2_down = MPI_REQUEST_NULL;
-        if (pad2 > 0 && realHp1 > 0) {
-            if (rank > 0) { MPI_Irecv(topHalo2.data(), slice2, MPI_FLOAT, rank - 1, 3, MPI_COMM_WORLD, &recv_req2_up); int send_count_up = std::min(slice2, (int)pool1Out.size()); if(send_count_up > 0) MPI_Isend(pool1Out.data(), send_count_up, MPI_FLOAT, rank - 1, 2, MPI_COMM_WORLD, &send_req2_up); else send_req2_up = MPI_REQUEST_NULL;} else { std::fill(topHalo2.begin(), topHalo2.end(), 0.0f); }
-            if (rank < size - 1) { MPI_Irecv(botHalo2.data(), slice2, MPI_FLOAT, rank + 1, 2, MPI_COMM_WORLD, &recv_req2_down); size_t send_offset_down = (size_t)std::max(0, realHp1 - pad2) * Wp1 * C1; int send_count_down = std::min(slice2, (int)((size_t)realHp1*Wp1*C1 - send_offset_down)); if (send_count_down > 0) { MPI_Isend(pool1Out.data() + send_offset_down, send_count_down, MPI_FLOAT, rank + 1, 3, MPI_COMM_WORLD, &send_req2_down); } else { send_req2_down = MPI_REQUEST_NULL; } } else { std::fill(botHalo2.begin(), botHalo2.end(), 0.0f); }
-            MPI_Wait(&recv_req2_up, MPI_STATUS_IGNORE); MPI_Wait(&send_req2_up, MPI_STATUS_IGNORE); MPI_Wait(&recv_req2_down, MPI_STATUS_IGNORE); MPI_Wait(&send_req2_down, MPI_STATUS_IGNORE);
-        } else { std::fill(topHalo2.begin(), topHalo2.end(), 0.0f); std::fill(botHalo2.begin(), botHalo2.end(), 0.0f); }
-
-        int pH2 = realHp1 + 2 * pad2;
-        std::vector<float> padded2((size_t)std::max(0,pH2) * Wp1 * C1, 0.0f);
-        if (realHp1 > 0 && pool1Out.size() > 0) { // Check pool1Out not empty
-             if (pad2 > 0) {
-                 if (slice2 <= static_cast<int>(padded2.size())) std::copy(topHalo2.begin(), topHalo2.end(), padded2.begin());
-                 if (slice2 + pool1Out.size() <= padded2.size()) std::copy(pool1Out.begin(), pool1Out.end(), padded2.begin() + slice2);
-                 if (slice2 + pool1Out.size() + slice2 <= padded2.size()) std::copy(botHalo2.begin(), botHalo2.end(), padded2.begin() + slice2 + pool1Out.size());
-             } else { padded2 = pool1Out; }
-        }
-
-        int Hc2 = convOutDim(pH2, conv2.F, conv2.P, conv2.S);
-        int Wc2 = convOutDim(Wp1, conv2.F, conv2.P, conv2.S);
-        std::vector<float> c2out((size_t)std::max(0,Hc2) * Wc2 * conv2.K);
-        serialConvLayer(c2out, padded2, conv2, pH2, Wp1, C1); // V2 uses LayerParams struct
-        serialReluLayer(c2out);
-
-        int Hp2 = poolOutDim(Hc2, conv2.F_pool, conv2.S_pool);
-        int Wp2 = poolOutDim(Wc2, conv2.F_pool, conv2.S_pool);
-        std::vector<float> p2out((size_t)std::max(0,Hp2) * Wp2 * conv2.K);
-        serialMaxPoolLayer(p2out, c2out, Hc2, Wc2, conv2.K, conv2.F_pool, conv2.S_pool);
-
-        std::vector<float> l2out(p2out.size());
-        serialLRNLayer(l2out, p2out, Hp2, Wp2, conv2.K, conv2.N_lrn, conv2.alpha, conv2.beta, conv2.k_lrn);
-
-        // 8) Trim output of LRN2 (Corrected Logic)
-        int trim_top2 = 0, trim_bot2 = 0;
-        if (pad2 > 0 && conv2.S > 0 && conv2.S_pool > 0) {
-            int rows_affected_by_pad_after_conv2 = (pad2 + conv2.S - 1) / conv2.S;
-            int trim_amount2 = (rows_affected_by_pad_after_conv2 + conv2.S_pool - 1) / conv2.S_pool;
-            trim_top2 = (rank > 0        ) ? trim_amount2 : 0;
-            trim_bot2 = (rank < size - 1 ) ? trim_amount2 : 0;
-        }
-        if (trim_top2 + trim_bot2 >= Hp2 && Hp2 > 0) { if(rank==0) std::cerr<<"E3 "; MPI_Abort(MPI_COMM_WORLD, 1); }
-        int realHp2 = Hp2 - trim_top2 - trim_bot2;
-        std::vector<float> localOut((size_t)std::max(0, realHp2) * Wp2 * conv2.K);
-         if (realHp2 > 0) {
-            for (int r = 0; r < realHp2; ++r) {
-                 size_t src_off = (size_t)(r + trim_top2) * Wp2 * conv2.K; size_t dst_off = (size_t)r * Wp2 * conv2.K; size_t count = (size_t)Wp2 * conv2.K;
-                 if (src_off + count <= l2out.size() && dst_off + count <= localOut.size()) { std::copy_n(l2out.data() + src_off, count, localOut.data() + dst_off); }
-                 else { if(rank==0) std::cerr<<"E4 "; MPI_Abort(MPI_COMM_WORLD, 1); }
-            }
-         } else { localOut.clear(); realHp2 = 0; }
-
-        // Gather sizes
-        int outCnt = static_cast<int>(localOut.size());
-        std::vector<int> recvCnt(size);
-        MPI_Gather(&outCnt, 1, MPI_INT, recvCnt.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-        // Calculate displacements and total size on Rank 0
-        std::vector<int> recvDisp;
-        int totalFinalSize = 0; // Define here for rank 0 scope
-        if (rank == 0) {
-            recvDisp.resize(size); recvDisp[0] = 0; totalFinalSize = recvCnt[0];
-            for (int i = 1; i < size; ++i) { recvDisp[i] = recvDisp[i-1] + recvCnt[i-1]; totalFinalSize += recvCnt[i]; }
-            finalOut.resize(totalFinalSize);
-        }
-
-        // Gather final data
-        MPI_Gatherv(localOut.data(), outCnt, MPI_FLOAT,
-                    finalOut.data(), recvCnt.data(), recvDisp.data(),
-                    MPI_FLOAT, 0, MPI_COMM_WORLD);
-        // --- End of Scatter/Halo Path Computation ---
-    } // End else (size > 1)
-
-    // --- Barrier after all computation and gathering ---
-    MPI_Barrier(MPI_COMM_WORLD);
-    auto t_end = std::chrono::high_resolution_clock::now(); // End Timer here
-
-    // 9) Final detailed summary and time (on rank 0)
-    if (rank == 0) {
-        // Calculate duration
-        double duration_ms = std::chrono::duration<double, std::milli>(t_end - t_start_compute).count();
-
-        // Verify final dimensions if size > 1 (check against broadcasted finalH/W/C)
-        int expectedTotalSize = finalH * finalW * finalC;
-        // Need totalFinalSize if size > 1; it's only calculated in the else block.
-        // Recalculate or retrieve totalFinalSize if needed here. Simpler: check finalOut size.
-        if (finalOut.size() != static_cast<size_t>(expectedTotalSize) && size > 1) {
-              // Note: This check might fail if finalH/W/C were incorrectly calculated initially.
-              // It's mainly a sanity check for the gather process.
-             std::cerr << "WARNING: Gathered size (" << finalOut.size()
-                       << ") does not match expected final size ("
-                       << finalH << "x" << finalW << "x" << finalC << " = " << expectedTotalSize
-                       << "). Check trim/halo/layer logic." << std::endl;
-        }
-
-        // Print shape and sample values
-        std::cout << "shape: " << finalH << "x" << finalW << "x" << finalC << std::endl;
-        std::cout << "Sample values: ";
-        int num_to_print = std::min((size_t)5, finalOut.size());
-        for (int i = 0; i < num_to_print; ++i) {
-            std::cout << finalOut[i] << (i == num_to_print - 1 ? "" : " ");
-        }
-        std::cout << std::endl;
-
-         // Print time in expected format
-        std::cout << "Execution Time: " << duration_ms << " ms" << std::endl;
-    }
-
-    MPI_Finalize();
-    return 0;
-}
-
-================================================================================
-
-=== FILE: final_project/v2_mpi_only/2.2_scatter_halo/src/alexnet_mpi.cpp ===
-
-#include "../include/alexnet.hpp"
-#include "../include/layers.hpp"
-
-void alexnetForwardPassMPI(std::vector<float>& input,
-                           const LayerParams& conv1,
-                           const LayerParams& conv2,
-                           int H, int W, int C,
-                           std::vector<float>& output)
-{
-    int Hc1 = convOutDim(H, conv1.F, conv1.P, conv1.S);
-    int Wc1 = convOutDim(W, conv1.F, conv1.P, conv1.S);
-    std::vector<float> conv1Out(Hc1 * Wc1 * conv1.K);
-
-    serialConvLayer(conv1Out, input, conv1, H, W, C);
-    serialReluLayer(conv1Out);
-
-    int Hp1 = convOutDim(Hc1, conv1.F_pool, 0, conv1.S_pool);
-    int Wp1 = convOutDim(Wc1, conv1.F_pool, 0, conv1.S_pool);
-    std::vector<float> pool1Out(Hp1 * Wp1 * conv1.K);
-    serialMaxPoolLayer(pool1Out, conv1Out, Hc1, Wc1, conv1.K,
-                       conv1.F_pool, conv1.S_pool);
-
-    int Hc2 = convOutDim(Hp1, conv2.F, conv2.P, conv2.S);
-    int Wc2 = convOutDim(Wp1, conv2.F, conv2.P, conv2.S);
-    std::vector<float> conv2Out(Hc2 * Wc2 * conv2.K);
-    serialConvLayer(conv2Out, pool1Out, conv2, Hp1, Wp1, conv1.K);
-    serialReluLayer(conv2Out);
-
-    int Hp2 = convOutDim(Hc2, conv2.F_pool, 0, conv2.S_pool);
-    int Wp2 = convOutDim(Wc2, conv2.F_pool, 0, conv2.S_pool);
-    std::vector<float> pool2Out(Hp2 * Wp2 * conv2.K);
-    serialMaxPoolLayer(pool2Out, conv2Out, Hc2, Wc2, conv2.K,
-                       conv2.F_pool, conv2.S_pool);
-
-    output.resize(pool2Out.size());
-    serialLRNLayer(output, pool2Out, Hp2, Wp2, conv2.K,
-                   conv2.N_lrn, conv2.alpha, conv2.beta, conv2.k_lrn);
-}
-
-
-================================================================================
-
-=== FILE: final_project/v2_mpi_only/2.2_scatter_halo/src/layers_mpi.cpp ===
-
-#include <algorithm>
-#include <cmath>
-#include <limits>
-#include "../include/layers.hpp"
-
-inline size_t idx3D(int h,int w,int c,int W,int C){
-    return (static_cast<size_t>(h)*W + w)*C + c;
-}
-
-void serialConvLayer(std::vector<float>& out,
-                     const std::vector<float>& in,
-                     const LayerParams& p,
-                     int H, int W, int C)
-{
-    int Ho = convOutDim(H, p.F, p.P, p.S);
-    int Wo = convOutDim(W, p.F, p.P, p.S);
-    for (int k = 0; k < p.K; ++k) {
-        for (int ho = 0; ho < Ho; ++ho) {
-            for (int wo = 0; wo < Wo; ++wo) {
-                float sum = p.biases[k];
-                for (int c = 0; c < C; ++c) {
-                    for (int fh = 0; fh < p.F; ++fh) {
-                        for (int fw = 0; fw < p.F; ++fw) {
-                            int hi = ho*p.S - p.P + fh;
-                            int wi = wo*p.S - p.P + fw;
-                            if (hi<0||hi>=H||wi<0||wi>=W) continue;
-                            sum += in[idx3D(hi,wi,c,W,C)] *
-                                   p.weights[(((k*C + c)*p.F + fh)*p.F) + fw];
-                        }
-                    }
-                }
-                out[idx3D(ho,wo,k,Wo,p.K)] = sum;
-            }
-        }
-    }
-}
-
-void serialReluLayer(std::vector<float>& data)
-{
-    for (auto &v : data) v = std::max(0.0f, v);
-}
-
-void serialMaxPoolLayer(std::vector<float>& out,
-                        const std::vector<float>& in,
-                        int H, int W, int C,
-                        int F_pool, int S_pool)
-{
-    int Ho = convOutDim(H, F_pool, 0, S_pool);
-    int Wo = convOutDim(W, F_pool, 0, S_pool);
-    for (int h = 0; h < Ho; ++h) {
-        for (int w = 0; w < Wo; ++w) {
-            for (int c = 0; c < C; ++c) {
-                float mx = -std::numeric_limits<float>::infinity();
-                for (int fh = 0; fh < F_pool; ++fh) {
-                    for (int fw = 0; fw < F_pool; ++fw) {
-                        int hi = h*S_pool + fh;
-                        int wi = w*S_pool + fw;
-                        mx = std::max(mx, in[idx3D(hi,wi,c,W,C)]);
-                    }
-                }
-                out[idx3D(h,w,c,Wo,C)] = mx;
-            }
-        }
-    }
-}
-
-void serialLRNLayer(std::vector<float>& out,
-                    const std::vector<float>& in,
-                    int H, int W, int C,
-                    int N, float alpha, float beta, float k)
-{
-    int half = N/2;
-    for (int h = 0; h < H; ++h) {
-        for (int w = 0; w < W; ++w) {
-            for (int c = 0; c < C; ++c) {
-                float sumSq = 0.0f;
-                for (int i = std::max(0,c-half); i <= std::min(C-1,c+half); ++i) {
-                    float v = in[idx3D(h,w,i,W,C)];
-                    sumSq += v*v;
-                }
-                float denom = std::pow(k + alpha * sumSq / N, beta);
-                out[idx3D(h,w,c,W,C)] =
-                    in[idx3D(h,w,c,W,C)] / denom;
-            }
-        }
-    }
-}
-
-
-================================================================================
-
-=== FILE: final_project/v3_cuda_only/Makefile ===
-
-# final_project/v3_cuda_only/Makefile
-
-# CUDA / GPU‐only version of AlexNet forward pass
-
-NVCC      := nvcc
-TARGET    := template
-INCLUDES  := -I./include
-
-# Add both a PTX entry (compute_75) and a SASS entry (sm_75)
-# so that if your GPU is e.g. Ampere (sm_80/86) it'll JIT from PTX.
-NVCCFLAGS := -std=c++11 -O3 \
-             -Xcompiler="-Wall -Wextra" \
-             -gencode arch=compute_75,code=compute_75 \
-             -gencode arch=compute_75,code=sm_75
-
-SRCS_CU   := src/alexnet_cuda.cu src/layers_cuda.cu
-SRCS_CPP  := src/main_cuda.cpp
-OBJS      := $(SRCS_CU:.cu=.o) $(SRCS_CPP:.cpp=.o)
-LDFLAGS   := -lcudart -lm
-
-all: $(TARGET)
-
-%.o: %.cu
-	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
-
-%.o: %.cpp
-	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
-
-$(TARGET): $(OBJS)
-	$(NVCC) $(NVCCFLAGS) -o $@ $(OBJS) $(LDFLAGS)
-
-clean:
-	rm -f $(OBJS) $(TARGET)
-
-
-================================================================================
-
-=== FILE: final_project/v3_cuda_only/include/alexnet.hpp ===
-
-#ifndef ALEXNET_CUDA_HPP
-#define ALEXNET_CUDA_HPP
-
-#include <vector>
-
-// Holds layer parameters (same as V1)
+#include <string> // For error messages
+#include <cstddef> // For size_t
+
+// Holds layer parameters (same as V1/V3)
+// Host vectors store the master copy, will be copied to device.
 struct LayerParams {
     std::vector<float> weights;
     std::vector<float> biases;
@@ -1181,259 +85,947 @@ struct LayerParams {
     float alpha, beta, k_lrn;
 };
 
-// Runs full forward pass on GPU
-// input: flattened H×W×C
-// out: flattened final feature map
-void alexnetForwardPassCUDA(
-    const std::vector<float>& input_host,
-    const LayerParams& paramsConv1,
-    const LayerParams& paramsConv2,
-    int H, int W, int C,
-    std::vector<float>& output_host);
+// Function to run the forward pass using MPI and CUDA
+// Takes the local portion of input data on host, performs computation on GPU,
+// returns the local portion of the final output on host.
+// **Declaration Only** - Definition is in alexnet_mpi_cuda.cu
+// *** ADDED original total height H argument ***
+void alexnetForwardPassMPI_CUDA(
+    const std::vector<float>& h_localInput, // Local input data slice on host
+    int localH,          // Height of the local input slice
+    int H, int W, int C, // *** ADDED H *** Original Dimensions (H, W, C)
+    const LayerParams& p1, // Params for Block 1 (Conv1, Pool1)
+    const LayerParams& p2, // Params for Block 2 (Conv2, Pool2, LRN2)
+    std::vector<float>& h_localOutput, // Local output slice on host (resized by function)
+    int rank, int size   // MPI rank and size for halo logic
+);
 
-#endif // ALEXNET_CUDA_HPP
+// Helper inline functions for calculating output dimensions
+inline int convOutDim(int D, int F, int P, int S) {
+    if (S <= 0) return 0; // Avoid division by zero
+    // Ensure filter fits, considering padding
+    if (F > D + 2 * P) return 0;
+    return (D + 2*P - F) / S + 1;
+}
 
+inline int poolOutDim(int D, int F, int S) {
+     if (S <= 0) return 0; // Avoid division by zero
+    // Standard pooling, assumes P=0
+    // Handle edge case where input dim is less than filter dim
+    if (D < F) return 0;
+    return (D - F) / S + 1;
+}
+
+#endif // ALEXNET_MPI_CUDA_HPP
 
 ================================================================================
 
-=== FILE: final_project/v3_cuda_only/include/layers.hpp ===
+=== FILE: final_project/v4_mpi_cuda/include/layers.hpp ===
 
-#ifndef LAYERS_CUDA_HPP
-#define LAYERS_CUDA_HPP
+#ifndef LAYERS_MPI_CUDA_HPP
+#define LAYERS_MPI_CUDA_HPP
 
-#include <vector>
+#include <cstddef> // Include for size_t
+
+// This header primarily declares the CUDA kernel *launcher* functions.
+// The actual kernels (__global__) are defined in layers_mpi_cuda.cu.
+// These signatures are identical to V3.
+// **Declarations Only** - Definitions are in layers_mpi_cuda.cu
 
 // Launches conv kernel: output size (Ho×Wo×K)
+// Operates entirely on device memory pointers.
 void cudaConvLayer(
     float* d_output,
     const float* d_input,
     const float* d_weights,
     const float* d_biases,
-    int H, int W, int C,
-    const int K, const int F, const int S, const int P);
+    int H, int W, int C, // Input dimensions (of d_input)
+    const int K, const int F, const int S, const int P); // Layer params
 
-// Elementwise ReLU in‐place
-void cudaReluLayer(float* d_data, int N);
+// Elementwise ReLU in‐place on device memory
+void cudaReluLayer(float* d_data, size_t N); // N = total number of elements
 
-// Max‐pool in one kernel
+// Max‐pool kernel launcher on device memory
 void cudaMaxPoolLayer(
     float* d_output,
     const float* d_input,
-    int H, int W, int C,
-    int F_pool, int S_pool);
+    int H, int W, int C, // Input dimensions (of d_input)
+    int F_pool, int S_pool); // Pooling params
 
-// Local response normalization
+// Local response normalization kernel launcher on device memory
 void cudaLRNLayer(
     float* d_output,
     const float* d_input,
-    int H, int W, int C,
-    int N, float alpha, float beta, float k);
+    int H, int W, int C, // Input dimensions (of d_input)
+    int N, float alpha, float beta, float k); // LRN params
 
-#endif // LAYERS_CUDA_HPP
-
+#endif // LAYERS_MPI_CUDA_HPP
 
 ================================================================================
 
-=== FILE: final_project/v3_cuda_only/src/main_cuda.cpp ===
+=== FILE: final_project/v4_mpi_cuda/src/main_mpi_cuda.cpp ===
 
+// final_project/v4_mpi_cuda/src/main_mpi_cuda.cpp
+#include <mpi.h>
 #include <iostream>
 #include <vector>
+#include <numeric> // For std::accumulate
 #include <chrono>
+#include <algorithm> // For std::min
+#include <cmath>     // For std::ceil, std::max
 #include <cuda_runtime.h>
-#include "../include/alexnet.hpp"
+#include <limits.h> // For INT_MAX
 
-// CPU helper for computing output dims
-inline int convOutDim(int D, int F, int P, int S) {
-    return (D + 2*P - F) / S + 1;
+#include "../include/alexnet.hpp" // Includes LayerParams, forward pass prototype, dim helpers
+
+// Simple helper to check CUDA calls from host code if needed (mainly used in .cu files)
+// In this .cpp file, major CUDA errors are more likely caught by MPI aborts triggered in alexnet_mpi_cuda.cu
+inline void hostCheckCUDA(cudaError_t err, const char* file, int line) {
+    if (err != cudaSuccess) {
+        // Ensure only one rank prints the error before aborting
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if (rank == 0) {
+             fprintf(stderr, "CUDA Error in host code at %s:%d - %s\n", file, line, cudaGetErrorString(err));
+             fflush(stderr);
+        }
+        MPI_Abort(MPI_COMM_WORLD, 1); // Use MPI_Abort for coordinated exit
+    }
 }
+#define HOST_CUDA_CHECK(call) { hostCheckCUDA((call), __FILE__, __LINE__); }
 
-int main() {
-    // 1) Setup identical to V1
-    int H=227, W=227, C=3;
-    LayerParams conv1, conv2;
-    std::vector<float> input(H*W*C,1.0f), output;
+int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    conv1.K=96; conv1.F=11; conv1.S=4; conv1.P=0;
-    conv1.F_pool=3; conv1.S_pool=2;
-    conv1.weights.assign(conv1.K*C*conv1.F*conv1.F,0.01f);
-    conv1.biases.assign(conv1.K,0.0f);
+    // --- 1. Root node initialization ---
+    int H = 227, W = 227, C = 3; // Standard AlexNet input - H is now crucial and broadcast
+    LayerParams p1, p2;
+    std::vector<float> h_inputData; // Full input data on host (rank 0 only)
+    std::vector<float> h_finalOutput; // Gathered final output on host (rank 0 only)
+    int finalH = -1, finalW = -1, finalC = -1; // Expected final dimensions
 
-    conv2.K=256; conv2.F=5; conv2.S=1; conv2.P=2;
-    conv2.F_pool=3; conv2.S_pool=2;
-    conv2.N_lrn=5; conv2.alpha=1e-4f; conv2.beta=0.75f; conv2.k_lrn=2.0f;
-    conv2.weights.assign(conv2.K*conv1.K*conv2.F*conv2.F,0.01f);
-    conv2.biases.assign(conv2.K,0.0f);
+    if (rank == 0) {
+        std::cout << "--- AlexNet MPI+CUDA (V4 - Host Staging) ---" << std::endl;
+        std::cout << "Initializing data and parameters on Rank 0..." << std::endl;
 
-    // 2) Run on GPU
-    auto t0 = std::chrono::high_resolution_clock::now();
-    alexnetForwardPassCUDA(input, conv1, conv2, H, W, C, output);
-    auto t1 = std::chrono::high_resolution_clock::now();
+        h_inputData.assign((size_t)H * W * C, 1.0f);
+        p1.K = 96; p1.F = 11; p1.S = 4; p1.P = 0;
+        p1.F_pool = 3; p1.S_pool = 2;
+        if (p1.F % 2 == 0 || p1.F_pool % 2 == 0) { std::cerr << "Warning: Filter sizes should be odd for simpler F/2 halo calculation." << std::endl; }
+        p1.weights.assign((size_t)p1.K * C * p1.F * p1.F, 0.01f);
+        p1.biases.assign(p1.K, 0.0f);
+        p2.K = 256; p2.F = 5; p2.S = 1; p2.P = 2;
+        p2.F_pool = 3; p2.S_pool = 2;
+        if (p2.F % 2 == 0 || p2.F_pool % 2 == 0) { std::cerr << "Warning: Filter sizes should be odd for simpler F/2 halo calculation." << std::endl; }
+        p2.N_lrn = 5; p2.alpha = 1e-4f; p2.beta = 0.75f; p2.k_lrn = 2.0f;
+        int C_conv2_input = p1.K;
+        p2.weights.assign((size_t)p2.K * C_conv2_input * p2.F * p2.F, 0.01f);
+        p2.biases.assign(p2.K, 0.0f);
 
-    // 3) Print timing & sample
-    double ms = std::chrono::duration<double,std::milli>(t1-t0).count();
-    std::cout<<"AlexNet CUDA Forward Pass completed in "<<ms<<" ms\n";
+        int Hc1 = convOutDim(H, p1.F, p1.P, p1.S); int Wc1 = convOutDim(W, p1.F, p1.P, p1.S);
+        int Hp1 = poolOutDim(Hc1, p1.F_pool, p1.S_pool); int Wp1 = poolOutDim(Wc1, p1.F_pool, p1.S_pool);
+        int Hc2 = convOutDim(Hp1, p2.F, p2.P, p2.S); int Wc2 = convOutDim(Wp1, p2.F, p2.P, p2.S);
+        int Hp2 = poolOutDim(Hc2, p2.F_pool, p2.S_pool); int Wp2 = poolOutDim(Wc2, p2.F_pool, p2.S_pool);
+        finalH = Hp2; finalW = Wp2; finalC = p2.K;
 
-    std::cout<<"Final Output (first 10 values):";
-    for(int i=0;i<10 && i<(int)output.size();++i)
-        std::cout<<" "<<output[i];
-    std::cout<<"\n";
+        if (finalH <= 0 || finalW <= 0 || finalC <=0) { std::cerr << "Error: Calculated final dimensions invalid (" << finalH << "x" << finalW << "x" << finalC << ")." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+        std::cout << "Expected final output dimensions: H=" << finalH << ", W=" << finalW << ", C=" << finalC << std::endl;
+        std::cout << "Initialization complete." << std::endl;
+    }
 
+    // --- 2. Broadcast essential parameters ---
+    MPI_Bcast(&H, 1, MPI_INT, 0, MPI_COMM_WORLD); // *** H is now broadcast ***
+    MPI_Bcast(&W, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&C, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&p1.K, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p1.F, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&p1.S, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p1.P, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&p1.F_pool, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p1.S_pool, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&p2.K, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p2.F, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&p2.S, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p2.P, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&p2.F_pool, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p2.S_pool, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&p2.N_lrn, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&finalH, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&finalW, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&finalC, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    float lrn_params[3];
+    if (rank == 0) { lrn_params[0] = p2.alpha; lrn_params[1] = p2.beta; lrn_params[2] = p2.k_lrn; }
+    MPI_Bcast(lrn_params, 3, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    if (rank != 0) { p2.alpha = lrn_params[0]; p2.beta = lrn_params[1]; p2.k_lrn = lrn_params[2]; }
+
+    size_t w1_size = (size_t)p1.K * C * p1.F * p1.F; size_t b1_size = (size_t)p1.K;
+    size_t w2_size = (size_t)p2.K * p1.K * p2.F * p2.F; size_t b2_size = (size_t)p2.K;
+    if (rank != 0) { p1.weights.resize(w1_size); p1.biases.resize(b1_size); p2.weights.resize(w2_size); p2.biases.resize(b2_size); }
+    if (w1_size > INT_MAX || b1_size > INT_MAX || w2_size > INT_MAX || b2_size > INT_MAX) { if (rank == 0) std::cerr << "Error: Parameter size exceeds INT_MAX." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+    MPI_Bcast(p1.weights.data(), static_cast<int>(w1_size), MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(p1.biases.data(), static_cast<int>(b1_size), MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(p2.weights.data(), static_cast<int>(w2_size), MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(p2.biases.data(), static_cast<int>(b2_size), MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+    // --- 3. Scatter Input Data ---
+    std::vector<int> sendCounts(size); std::vector<int> displacements(size);
+    std::vector<float> h_localInput; int localH = 0; int rowSize = W * C;
+    if (rowSize <= 0 && H > 0 && W > 0 && C > 0) { if (rank == 0) std::cerr << "Error: Calculated rowSize invalid." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+    if (rank == 0) {
+        int baseRows = H / size; int extraRows = H % size; int currentDisplacement = 0;
+        for (int i = 0; i < size; ++i) {
+            int rowsForRank = baseRows + (i < extraRows ? 1 : 0); sendCounts[i] = rowsForRank * rowSize;
+            if (rowsForRank > 0 && rowSize > 0 && sendCounts[i] / rowsForRank != rowSize ) { std::cerr << "Error: Scatter count overflow rank " << i << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+            displacements[i] = currentDisplacement;
+            if (sendCounts[i] < 0 || currentDisplacement < 0 || currentDisplacement > INT_MAX - sendCounts[i]) { std::cerr << "Error: Scatter displacement overflow rank " << i << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+            currentDisplacement += sendCounts[i];
+        }
+        if (currentDisplacement != H * W * C && H > 0) { std::cerr << "Error: Total scatter size mismatch." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+    }
+    int rowsForMyRank; std::vector<int> rowsPerRank(size);
+    if (rank == 0) { int baseRows = H / size; int extraRows = H % size; for(int i=0; i<size; ++i) rowsPerRank[i] = baseRows + (i < extraRows ? 1 : 0); }
+    MPI_Scatter(rowsPerRank.data(), 1, MPI_INT, &rowsForMyRank, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    localH = rowsForMyRank;
+    int localInputSize = localH * rowSize; if (localInputSize < 0) localInputSize = 0;
+    if (localInputSize > 0) h_localInput.resize(localInputSize); else h_localInput.clear();
+    MPI_Scatterv( (rank == 0 && !h_inputData.empty()) ? h_inputData.data() : nullptr, sendCounts.data(), displacements.data(), MPI_FLOAT, h_localInput.empty() ? nullptr : h_localInput.data(), localInputSize, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+    // --- 4. Select GPU and Run Forward Pass ---
+    int deviceId = 0; int numDevices = 0; cudaError_t cuda_err = cudaGetDeviceCount(&numDevices);
+    if (cuda_err != cudaSuccess) { if (rank == 0) fprintf(stderr, "CUDA error cudaGetDeviceCount: %s\n", cudaGetErrorString(cuda_err)); MPI_Abort(MPI_COMM_WORLD, 1); }
+    if (numDevices > 0) { deviceId = rank % numDevices; HOST_CUDA_CHECK(cudaSetDevice(deviceId)); /* Print info if needed */ }
+    else { if (rank == 0) std::cerr << "Error: No CUDA devices found." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+    std::vector<float> h_localOutput;
+    MPI_Barrier(MPI_COMM_WORLD); auto t_start = std::chrono::high_resolution_clock::now();
+
+    // *** UPDATE THE CALL: Pass H ***
+    alexnetForwardPassMPI_CUDA(h_localInput, localH, H, W, C, p1, p2, h_localOutput, rank, size);
+
+    MPI_Barrier(MPI_COMM_WORLD); auto t_end = std::chrono::high_resolution_clock::now();
+
+    // --- 5. Gather Final Results ---
+    int localOutputSize = static_cast<int>(h_localOutput.size()); if (localOutputSize < 0) localOutputSize = 0;
+    std::vector<int> recvCounts(size, 0); std::vector<int> recvDisplacements(size, 0);
+    MPI_Gather(&localOutputSize, 1, MPI_INT, recvCounts.empty() ? nullptr : recvCounts.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+    long long totalFinalSize_ll = 0;
+    if (rank == 0) {
+        if (recvCounts.empty()) { std::cerr << "Error: recvCounts empty rank 0." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+        recvDisplacements.resize(size); recvDisplacements[0] = 0;
+        if (recvCounts[0] < 0) { std::cerr << "Error: Rank 0 neg recv count." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+        totalFinalSize_ll = recvCounts[0];
+        for (int i = 1; i < size; ++i) {
+            if (recvCounts[i-1] < 0) { std::cerr << "Error: Rank " << i-1 << " neg recv count." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+            long long prevDisp_ll = recvDisplacements[i-1];
+            if (prevDisp_ll > INT_MAX - recvCounts[i-1]) { std::cerr << "Error: Gather displ overflow rank " << i << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+            recvDisplacements[i] = prevDisp_ll + recvCounts[i-1];
+            if (recvCounts[i] < 0) { std::cerr << "Error: Rank " << i << " neg recv count." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+            totalFinalSize_ll += recvCounts[i];
+        }
+        if (totalFinalSize_ll > h_finalOutput.max_size()) { std::cerr << "Error: Total gather size exceeds vector max_size." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
+        if (totalFinalSize_ll < 0) totalFinalSize_ll = 0;
+        h_finalOutput.resize(static_cast<size_t>(totalFinalSize_ll));
+    }
+    MPI_Gatherv( h_localOutput.empty() ? nullptr : h_localOutput.data(), localOutputSize, MPI_FLOAT, (rank == 0 && !h_finalOutput.empty()) ? h_finalOutput.data() : nullptr, recvCounts.empty() ? nullptr : recvCounts.data(), recvDisplacements.empty() ? nullptr : recvDisplacements.data(), MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+    // --- 6. Final Output and Timing (Rank 0) ---
+    if (rank == 0) {
+        double duration_ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
+        std::cout << "AlexNet MPI+CUDA Forward Pass completed in " << duration_ms << " ms" << std::endl;
+        int expectedTotalSize = finalH * finalW * finalC; size_t gatheredSize = h_finalOutput.size();
+        if (finalH > 0) { std::cout << "Final Output Shape: " << finalH << "x" << finalW << "x" << finalC << std::endl; }
+        else { std::cout << "Final Output Shape: Calculation resulted in non-positive expected dimensions." << std::endl; }
+        if (finalH > 0 && gatheredSize != static_cast<size_t>(expectedTotalSize)) { std::cerr << "WARNING: Gathered size (" << gatheredSize << ") != expected (" << expectedTotalSize << "). Check logic." << std::endl; }
+        else if (finalH <= 0) { std::cout << "Gathered total size: " << gatheredSize << " elements." << std::endl; }
+        std::cout << "Final Output (first 10 values):";
+        size_t num_to_print = std::min((size_t)10, h_finalOutput.size());
+        for (size_t i = 0; i < num_to_print; ++i) { std::cout << " " << h_finalOutput[i]; }
+        if (h_finalOutput.size() > 10) std::cout << " ...";
+        std::cout << std::endl;
+    }
+
+    MPI_Finalize();
     return 0;
 }
 
-
 ================================================================================
 
-=== FILE: final_project/v3_cuda_only/src/alexnet_cuda.cu ===
+=== FILE: final_project/v4_mpi_cuda/src/alexnet_mpi_cuda.cu ===
 
-#include <cstdio>         // for fprintf, stderr
-#include <cstdlib>        // for exit
-#include <cmath>          // for powf
+// final_project/v4_mpi_cuda/src/alexnet_mpi_cuda.cu
 #include <cuda_runtime.h>
+#include <mpi.h>
 #include <vector>
-#include "../include/alexnet.hpp"
-#include "../include/layers.hpp"
+#include <cmath>
+#include <algorithm>
+#include <iostream> // For debug prints
+#include <cstdio>   // For fprintf, stderr, PRIu64 with cinttypes
+#include <cstdlib>  // For exit
+#include <climits>  // Include for SIZE_MAX and INT_MAX
+#include <cinttypes> // Include for PRIu64 macro
+#ifndef SIZE_MAX // Define SIZE_MAX if not defined (e.g., by older standards/compilers)
+#define SIZE_MAX ((size_t)-1)
+#endif
 
-// Helper macro for checking CUDA errors
+
+#include "../include/alexnet.hpp" // Includes LayerParams, dim helpers
+#include "../include/layers.hpp"  // Includes CUDA kernel launchers
+
+// Helper macro for checking CUDA errors from .cu files
 #define CUDA_CHECK(call)                                    \
   do {                                                      \
     cudaError_t err = call;                                 \
     if(err != cudaSuccess) {                                \
-      std::fprintf(stderr,                                  \
-        "CUDA error %s:%d '%s'\n",                         \
-        __FILE__, __LINE__, cudaGetErrorString(err));       \
-      std::exit(1);                                         \
+      int rank_for_error; MPI_Comm_rank(MPI_COMM_WORLD, &rank_for_error); \
+      fprintf(stderr,                                       \
+        "[Rank %d] CUDA error in %s:%d: %s (%d)\n",         \
+         rank_for_error, __FILE__, __LINE__, cudaGetErrorString(err), err);  \
+      fflush(stderr); /* Ensure message prints before abort */ \
+      MPI_Abort(MPI_COMM_WORLD, err); /* Coordinated abort */ \
     }                                                       \
   } while(0)
 
-// Runs the sequence of Conv1→ReLU→Pool1→Conv2→ReLU→Pool2→LRN2 on device
-void alexnetForwardPassCUDA(
-    const std::vector<float>& input_host,
-    const LayerParams& p1,
-    const LayerParams& p2,
-    int H,int W,int C,
-    std::vector<float>& output_host)
-{
-    // Allocate device buffers
-    float *d_input, *d_c1out, *d_p1out,
-          *d_c2out, *d_p2out, *d_l2out;
-    float *d_w1,*d_b1,*d_w2,*d_b2;
+// Integer ceiling division helper
+inline int ceil_div(int numerator, int denominator) {
+    if (denominator == 0) return 0; // Or handle error appropriately
+    // Ensure calculation handles negative numerator correctly if needed, though unlikely here.
+    return (numerator + denominator - 1) / denominator;
+}
 
-    // Conv1 dims
-    int Hc1 = (H + 2*p1.P - p1.F)/p1.S + 1;
-    int Wc1 = (W + 2*p1.P - p1.F)/p1.S + 1;
-    int Hp1 = (Hc1 - p1.F_pool)/p1.S_pool + 1;
-    int Wp1 = (Wc1 - p1.F_pool)/p1.S_pool + 1;
+// Helper to calculate the start index of the output range based on input range start
+inline int mapRangeStart(int in_start, int F, int P, int S) {
+    if (S <= 0) return 0;
+    // out_start = ceil((in_start - F + 1 + P) / S)
+    // Need to handle potential negative intermediate value correctly for ceil
+    int numerator = in_start - F + 1 + P;
+    // Manual ceil for potentially negative numerator: floor((num + den - 1) / den) works for positive den
+    // Simpler for positive S: (numerator > 0) ? (numerator + S - 1) / S : numerator / S;
+    // Even simpler: use the helper
+     return ceil_div(numerator, S);
+}
 
-    // Conv2 dims
-    int Hc2 = (Hp1 + 2*p2.P - p2.F)/p2.S + 1;
-    int Wc2 = (Wp1 + 2*p2.P - p2.F)/p2.S + 1;
-    int Hp2 = (Hc2 - p2.F_pool)/p2.S_pool + 1;
-    int Wp2 = (Wc2 - p2.F_pool)/p2.S_pool + 1;
-
-    // Sizes
-    size_t in_sz   = (size_t)H*W*C;
-    size_t c1_sz   = (size_t)Hc1*Wc1*p1.K;
-    size_t p1_sz   = (size_t)Hp1*Wp1*p1.K;
-    size_t c2_sz   = (size_t)Hc2*Wc2*p2.K;
-    size_t p2_sz   = (size_t)Hp2*Wp2*p2.K;
-    size_t l2_sz   = p2_sz;
-
-    CUDA_CHECK(cudaMalloc(&d_input, in_sz * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&d_c1out, c1_sz * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&d_p1out, p1_sz * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&d_c2out, c2_sz * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&d_p2out, p2_sz * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&d_l2out, l2_sz * sizeof(float)));
-
-    CUDA_CHECK(cudaMalloc(&d_w1, p1.weights.size()*sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&d_b1, p1.biases .size()*sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&d_w2, p2.weights.size()*sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&d_b2, p2.biases .size()*sizeof(float)));
-
-    // Copy host→device
-    CUDA_CHECK(cudaMemcpy(d_input, input_host.data(),   in_sz*sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_w1,   p1.weights.data(),    p1.weights.size()*sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_b1,   p1.biases.data(),     p1.biases .size()*sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_w2,   p2.weights.data(),    p2.weights.size()*sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_b2,   p2.biases.data(),     p2.biases .size()*sizeof(float), cudaMemcpyHostToDevice));
-
-    // 1) Conv1→ReLU→Pool1
-    cudaConvLayer(d_c1out, d_input, d_w1, d_b1, H, W, C, p1.K, p1.F, p1.S, p1.P);
-    cudaReluLayer(d_c1out, (int)c1_sz);
-    cudaMaxPoolLayer(d_p1out, d_c1out, Hc1, Wc1, p1.K, p1.F_pool, p1.S_pool);
-
-    // 2) Conv2→ReLU→Pool2
-    cudaConvLayer(d_c2out, d_p1out, d_w2, d_b2, Hp1, Wp1, p1.K, p2.K, p2.F, p2.S, p2.P);
-    cudaReluLayer(d_c2out, (int)c2_sz);
-    cudaMaxPoolLayer(d_p2out, d_c2out, Hc2, Wc2, p2.K, p2.F_pool, p2.S_pool);
-
-    // 3) LRN2
-    cudaLRNLayer(d_l2out, d_p2out, Hp2, Wp2, p2.K, p2.N_lrn, p2.alpha, p2.beta, p2.k_lrn);
-
-    // Copy result back
-    output_host.resize(l2_sz);
-    CUDA_CHECK(cudaMemcpy(output_host.data(), d_l2out, l2_sz*sizeof(float), cudaMemcpyDeviceToHost));
-
-    // Free
-    cudaFree(d_input);
-    cudaFree(d_c1out); cudaFree(d_p1out);
-    cudaFree(d_c2out); cudaFree(d_p2out); cudaFree(d_l2out);
-    cudaFree(d_w1); cudaFree(d_b1); cudaFree(d_w2); cudaFree(d_b2);
+// Helper to calculate the end index of the output range based on input range end
+inline int mapRangeEnd(int in_end, int /*F*/, int P, int S) {
+     if (S <= 0) return -1; // Indicate invalid range
+    // out_end = floor((in_end + P) / S)
+    int numerator = in_end + P;
+    if (numerator < 0) {
+        // Handle negative numerator for floor division if necessary, though unlikely here.
+        // Standard integer division truncates towards zero. For floor with negative: (num - den + 1) / den ?
+        // Let's assume in_end+P is usually non-negative.
+        return (numerator / S) - ( (numerator % S != 0 && numerator < 0) ? 1 : 0); // More robust floor
+    } else {
+        return numerator / S; // Standard integer division works as floor for non-negative
+    }
 }
 
 
+// --- alexnetForwardPassMPI_CUDA Implementation ---
+void alexnetForwardPassMPI_CUDA(
+    const std::vector<float>& h_localInput, // Local input data slice on host
+    int localH,          // Height of the local input slice
+    int H, int W, int C, // *** USE PASSED H *** Original Dimensions (H, W, C)
+    const LayerParams& p1, // Params for Block 1 (Conv1, Pool1)
+    const LayerParams& p2, // Params for Block 2 (Conv2, Pool2, LRN2)
+    std::vector<float>& h_localOutput, // Local output slice on host (resized by function)
+    int rank, int size   // MPI rank and size for halo logic
+) {
+
+    // --- 0. Handle Empty Input Case ---
+    if (localH <= 0 || H <= 0 || W <= 0 || C <= 0) {
+        h_localOutput.clear();
+         // if(rank == 0) fprintf(stderr, "[Rank %d] Info: Skipping computation due to zero input/dimension (localH=%d, H=%d, W=%d, C=%d).\n", rank, localH, H, W, C);
+        return;
+    }
+
+    // --- 1. Calculate Dimensions & Halo Sizes ---
+    int haloRows1 = (p1.F > 1) ? p1.F / 2 : 0;
+    int haloRows2 = (p2.F > 1) ? p2.F / 2 : 0;
+
+    bool hasTopHalo = (rank > 0 && haloRows1 > 0);
+    bool hasBotHalo = (rank < size - 1 && haloRows1 > 0);
+    int paddedH1 = localH + (hasTopHalo ? haloRows1 : 0) + (hasBotHalo ? haloRows1 : 0);
+
+    // Calculate overall dimensions of intermediate layers based on *padded* height
+    // These represent the buffer sizes needed.
+    int Hc1 = convOutDim(paddedH1, p1.F, p1.P, p1.S);
+    int Wc1 = convOutDim(W, p1.F, p1.P, p1.S);
+    int Hp1 = poolOutDim(Hc1, p1.F_pool, p1.S_pool);
+    int Wp1 = poolOutDim(Wc1, p1.F_pool, p1.S_pool);
+    int C1 = p1.K;
+    // *** DEBUG PRINT ***
+    // fprintf(stderr, "[Rank %d] Calc1: localH=%d, paddedH1=%d, Hc1=%d, Wc1=%d, Hp1=%d, Wp1=%d, C1=%d\n", rank, localH, paddedH1, Hc1, Wc1, Hp1, Wp1, C1);
+
+
+    // --- Calculate Trimming for Pool1 ---
+    // Find the global row indices for this rank's original input data
+    int myGlobalStartRow = 0;
+    if (size > 0 && H > 0) {
+         int baseRows = H / size; int extraRows = H % size;
+         for(int r=0; r<rank; ++r) { myGlobalStartRow += baseRows + (r < extraRows ? 1 : 0); }
+    } else if (H <= 0) { fprintf(stderr, "[Rank %d] Error: Total height H is invalid (%d).\n", rank, H); MPI_Abort(MPI_COMM_WORLD, 1); }
+    int myGlobalEndRow = myGlobalStartRow + localH - 1;
+    if (myGlobalEndRow >= H) { fprintf(stderr, "[Rank %d] Error: Calculated global end row (%d) >= total height (%d). localH=%d, startRow=%d\n", rank, myGlobalEndRow, H, localH, myGlobalStartRow); MPI_Abort(MPI_COMM_WORLD, 1); }
+    // *** DEBUG PRINT ***
+    // fprintf(stderr, "[Rank %d] Global Rows: Start=%d, End=%d (localH=%d)\n", rank, myGlobalStartRow, myGlobalEndRow, localH);
+
+
+    // Map these global start/end rows through the layers using CORRECT range mapping
+    // Map Conv1
+    int conv1_start_ho = mapRangeStart(myGlobalStartRow, p1.F, p1.P, p1.S);
+    int conv1_end_ho   = mapRangeEnd(myGlobalEndRow, p1.F, p1.P, p1.S);
+    // Map Pool1 (using Conv1's output range as input)
+    int pool1_start_ho = mapRangeStart(conv1_start_ho, p1.F_pool, 0, p1.S_pool); // Pool P=0
+    int pool1_end_ho   = mapRangeEnd(conv1_end_ho, p1.F_pool, 0, p1.S_pool); // Pool P=0
+
+    // Calculate valid height for Pool1 output on this rank
+    int validHp1 = (pool1_end_ho >= pool1_start_ho) ? (pool1_end_ho - pool1_start_ho + 1) : 0;
+
+    // Calculate the *local* start index (trimTop1) within the Hp1-sized buffer
+    // Need the global start index if rank 0 processed input row 0
+    int global_conv1_start_for_row0 = mapRangeStart(0, p1.F, p1.P, p1.S);
+    int global_pool1_start_for_row0 = mapRangeStart(global_conv1_start_for_row0, p1.F_pool, 0, p1.S_pool);
+
+    int trimTop1 = pool1_start_ho - global_pool1_start_for_row0;
+
+    // Clamp trimTop1 and validHp1 based on the actual buffer size Hp1
+    if (trimTop1 < 0) trimTop1 = 0;
+    if (trimTop1 >= Hp1) { // If start offset is beyond buffer size
+        trimTop1 = (Hp1 > 0 ? Hp1 : 0);
+        validHp1 = 0;
+    } else { // If start offset is within buffer, check end
+        if (trimTop1 + validHp1 > Hp1) { // If calculated valid region extends beyond buffer
+            validHp1 = std::max(0, Hp1 - trimTop1); // Clamp valid height
+        }
+    }
+    if (validHp1 < 0) validHp1 = 0; // Final safety
+    // *** DEBUG PRINT ***
+    fprintf(stderr, "[Rank %d] Pool1 Trim: Hp1=%d, global_pool1_range=[%d, %d], validHp1=%d, trimTop1=%d\n", rank, Hp1, pool1_start_ho, pool1_end_ho, validHp1, trimTop1);
+
+
+    // --- Dimensions for Block 2 ---
+    bool hasTopHalo2 = (rank > 0 && haloRows2 > 0 && validHp1 > 0);
+    bool hasBotHalo2 = (rank < size - 1 && haloRows2 > 0 && validHp1 > 0);
+    int paddedH2 = validHp1 + (hasTopHalo2 ? haloRows2 : 0) + (hasBotHalo2 ? haloRows2 : 0);
+
+    // Overall dimensions based on padded height
+    int Hc2 = convOutDim(paddedH2, p2.F, p2.P, p2.S);
+    int Wc2 = convOutDim(Wp1, p2.F, p2.P, p2.S);
+    int Hp2 = poolOutDim(Hc2, p2.F_pool, p2.S_pool);
+    int Wp2 = poolOutDim(Wc2, p2.F_pool, p2.S_pool);
+    int C2 = p2.K;
+    // *** DEBUG PRINT ***
+    // fprintf(stderr, "[Rank %d] Calc2: validHp1=%d, paddedH2=%d, Hc2=%d, Wc2=%d, Hp2=%d, Wp2=%d, C2=%d\n", rank, validHp1, paddedH2, Hc2, Wc2, Hp2, Wp2, C2);
+
+
+    // --- Calculate Trimming for Pool2 ---
+    // Map the global Pool1 output range through Conv2 and Pool2
+    int global_pool1_start = pool1_start_ho; // Global start index of this rank's valid Pool1 output
+    int global_pool1_end = pool1_end_ho;     // Global end index
+
+    // Map Conv2
+    int conv2_start_ho = mapRangeStart(global_pool1_start, p2.F, p2.P, p2.S);
+    int conv2_end_ho   = mapRangeEnd(global_pool1_end, p2.F, p2.P, p2.S);
+    // Map Pool2
+    int pool2_start_ho = mapRangeStart(conv2_start_ho, p2.F_pool, 0, p2.S_pool);
+    int pool2_end_ho   = mapRangeEnd(conv2_end_ho, p2.F_pool, 0, p2.S_pool);
+
+    // Calculate final valid height for this rank
+    int finalLocalH = (pool2_end_ho >= pool2_start_ho) ? (pool2_end_ho - pool2_start_ho + 1) : 0;
+
+    // Calculate trimTop2 relative to the Hp2-sized buffer
+    // Need the global start index if rank 0 processed input pool1 row 0 (derived from input row 0)
+    int global_conv2_start_for_row0 = mapRangeStart(global_pool1_start_for_row0, p2.F, p2.P, p2.S);
+    int global_pool2_start_for_row0 = mapRangeStart(global_conv2_start_for_row0, p2.F_pool, 0, p2.S_pool);
+
+    int trimTop2 = pool2_start_ho - global_pool2_start_for_row0;
+
+    // Clamp trimTop2 and finalLocalH based on actual buffer size Hp2
+     if (trimTop2 < 0) trimTop2 = 0;
+     if (trimTop2 >= Hp2) {
+         trimTop2 = (Hp2 > 0 ? Hp2 : 0);
+         finalLocalH = 0;
+     } else {
+         if (trimTop2 + finalLocalH > Hp2) {
+             finalLocalH = std::max(0, Hp2 - trimTop2);
+         }
+     }
+     if (finalLocalH < 0) finalLocalH = 0; // Final safety
+     // *** DEBUG PRINT ***
+     fprintf(stderr, "[Rank %d] Pool2 Trim: Hp2=%d, global_pool2_range=[%d, %d], finalLocalH=%d, trimTop2=%d\n", rank, Hp2, pool2_start_ho, pool2_end_ho, finalLocalH, trimTop2);
+
+
+    // --- 2. Allocate Device Memory ---
+    // (Allocation code remains the same)
+    float *d_input_padded1 = nullptr, *d_conv1_out = nullptr, *d_pool1_out = nullptr,
+          *d_input_padded2 = nullptr, *d_conv2_out = nullptr, *d_pool2_out = nullptr,
+          *d_lrn2_out = nullptr;
+    float *d_weights1 = nullptr, *d_biases1 = nullptr,
+          *d_weights2 = nullptr, *d_biases2 = nullptr;
+
+    size_t inputPadded1Size = (size_t)paddedH1 * W * C;
+    size_t conv1OutSize = (size_t)Hc1 * Wc1 * C1;
+    size_t pool1OutSize = (size_t)Hp1 * Wp1 * C1;
+    size_t inputPadded2Size = (size_t)paddedH2 * Wp1 * C1;
+    size_t conv2OutSize = (size_t)Hc2 * Wc2 * C2;
+    size_t pool2OutSize = (size_t)Hp2 * Wp2 * C2;
+    size_t lrn2OutSize = pool2OutSize;
+
+    size_t w1Size = p1.weights.size(); size_t b1Size = p1.biases.size();
+    size_t w2Size = p2.weights.size(); size_t b2Size = p2.biases.size();
+
+    if (inputPadded1Size > 0) CUDA_CHECK(cudaMalloc(&d_input_padded1, inputPadded1Size * sizeof(float))); else d_input_padded1=nullptr;
+    if (conv1OutSize > 0)     CUDA_CHECK(cudaMalloc(&d_conv1_out, conv1OutSize * sizeof(float)));     else d_conv1_out = nullptr;
+    if (pool1OutSize > 0)     CUDA_CHECK(cudaMalloc(&d_pool1_out, pool1OutSize * sizeof(float)));     else d_pool1_out = nullptr;
+    if (inputPadded2Size > 0) CUDA_CHECK(cudaMalloc(&d_input_padded2, inputPadded2Size * sizeof(float))); else d_input_padded2 = nullptr;
+    if (conv2OutSize > 0)     CUDA_CHECK(cudaMalloc(&d_conv2_out, conv2OutSize * sizeof(float)));     else d_conv2_out = nullptr;
+    if (pool2OutSize > 0)     CUDA_CHECK(cudaMalloc(&d_pool2_out, pool2OutSize * sizeof(float)));     else d_pool2_out = nullptr;
+    if (lrn2OutSize > 0)      CUDA_CHECK(cudaMalloc(&d_lrn2_out, lrn2OutSize * sizeof(float)));      else d_lrn2_out = nullptr;
+
+    if (w1Size > 0) CUDA_CHECK(cudaMalloc(&d_weights1, w1Size * sizeof(float))); else d_weights1 = nullptr;
+    if (b1Size > 0) CUDA_CHECK(cudaMalloc(&d_biases1, b1Size * sizeof(float))); else d_biases1 = nullptr;
+    if (w2Size > 0) CUDA_CHECK(cudaMalloc(&d_weights2, w2Size * sizeof(float))); else d_weights2 = nullptr;
+    if (b2Size > 0) CUDA_CHECK(cudaMalloc(&d_biases2, b2Size * sizeof(float))); else d_biases2 = nullptr;
+
+
+    // --- 3. Copy Initial Data Host -> Device ---
+    // (Copy code remains the same, including bounds checks)
+    if (w1Size > 0 && !p1.weights.empty() && d_weights1) CUDA_CHECK(cudaMemcpy(d_weights1, p1.weights.data(), w1Size * sizeof(float), cudaMemcpyHostToDevice));
+    if (b1Size > 0 && !p1.biases.empty() && d_biases1)   CUDA_CHECK(cudaMemcpy(d_biases1, p1.biases.data(), b1Size * sizeof(float), cudaMemcpyHostToDevice));
+    if (w2Size > 0 && !p2.weights.empty() && d_weights2) CUDA_CHECK(cudaMemcpy(d_weights2, p2.weights.data(), w2Size * sizeof(float), cudaMemcpyHostToDevice));
+    if (b2Size > 0 && !p2.biases.empty() && d_biases2)   CUDA_CHECK(cudaMemcpy(d_biases2, p2.biases.data(), b2Size * sizeof(float), cudaMemcpyHostToDevice));
+
+    size_t localInputSizeBytes = h_localInput.size() * sizeof(float);
+    size_t inputRowSizeBytes = (W > 0 && C > 0) ? (size_t)W * C * sizeof(float) : 0;
+    size_t inputHalo1SizeBytes = (size_t)haloRows1 * inputRowSizeBytes;
+    size_t inputOffsetElements = (hasTopHalo ? inputHalo1SizeBytes : 0) / sizeof(float);
+
+    if (localInputSizeBytes > 0 && d_input_padded1 != nullptr) {
+        if (inputOffsetElements * sizeof(float) + localInputSizeBytes > inputPadded1Size * sizeof(float)) {
+             fprintf(stderr, "[Rank %d] Error: Initial H->D copy exceeds destination buffer bounds (Offset=%" PRIu64 ", Size=%" PRIu64 ", BufferSize=%" PRIu64 ").\n", rank, (uint64_t)(inputOffsetElements*sizeof(float)), (uint64_t)localInputSizeBytes, (uint64_t)(inputPadded1Size*sizeof(float)) ); MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+        CUDA_CHECK(cudaMemcpy(d_input_padded1 + inputOffsetElements, h_localInput.data(), localInputSizeBytes, cudaMemcpyHostToDevice));
+    }
+
+
+    // --- 4. Halo Exchange for Conv1 ---
+    // (Halo exchange code remains the same, including skip_halo1 label and bounds checks)
+    if (haloRows1 > 0 && inputRowSizeBytes > 0) {
+        MPI_Request send_req_up = MPI_REQUEST_NULL, recv_req_up = MPI_REQUEST_NULL;
+        MPI_Request send_req_down = MPI_REQUEST_NULL, recv_req_down = MPI_REQUEST_NULL;
+        std::vector<float> h_send_buffer_up(haloRows1 * W * C);
+        std::vector<float> h_recv_buffer_up(haloRows1 * W * C);
+        std::vector<float> h_send_buffer_down(haloRows1 * W * C);
+        std::vector<float> h_recv_buffer_down(haloRows1 * W * C);
+
+        int partner_up = rank - 1; int partner_down = rank + 1;
+        int tag_up = 0; int tag_down = 1;
+        int haloElementCount = inputHalo1SizeBytes / sizeof(float);
+        if (haloElementCount <=0) goto skip_halo1;
+
+        //fprintf(stderr, "[Rank %d] Halo1: Exchanging %d elements (haloRows1=%d).\n", rank, haloElementCount, haloRows1);
+
+        if (hasTopHalo) { MPI_Irecv(h_recv_buffer_up.data(), haloElementCount, MPI_FLOAT, partner_up, tag_up, MPI_COMM_WORLD, &recv_req_up); }
+        if (hasBotHalo) { MPI_Irecv(h_recv_buffer_down.data(), haloElementCount, MPI_FLOAT, partner_down, tag_down, MPI_COMM_WORLD, &recv_req_down); }
+
+        if (hasBotHalo && d_input_padded1 != nullptr) {
+            size_t sendOffsetElements = inputOffsetElements + (localInputSizeBytes / sizeof(float)) - haloElementCount;
+            if (sendOffsetElements * sizeof(float) >= 0 && sendOffsetElements + haloElementCount <= inputPadded1Size) { // Check non-negative offset and bounds
+                 //fprintf(stderr, "[Rank %d] Halo1 Send Up D->H: Offset=%" PRIu64 ", Count=%" PRIu64 "\n", rank, (uint64_t)sendOffsetElements, (uint64_t)haloElementCount);
+                 CUDA_CHECK(cudaMemcpy(h_send_buffer_up.data(), d_input_padded1 + sendOffsetElements, inputHalo1SizeBytes, cudaMemcpyDeviceToHost));
+                 MPI_Isend(h_send_buffer_up.data(), haloElementCount, MPI_FLOAT, partner_down, tag_up, MPI_COMM_WORLD, &send_req_up);
+            } else { fprintf(stderr, "[Rank %d] Error: Halo1 send up offset invalid or out of bounds (Offset=%" PRId64 ", Count=%d, Size=%" PRIu64").\n", rank, (int64_t)sendOffsetElements, haloElementCount, (uint64_t)inputPadded1Size); MPI_Abort(MPI_COMM_WORLD, 1); }
+        }
+         if (hasTopHalo && d_input_padded1 != nullptr) {
+             if (inputOffsetElements * sizeof(float) >= 0 && inputOffsetElements + haloElementCount <= inputPadded1Size) { // Check non-negative offset and bounds
+                  //fprintf(stderr, "[Rank %d] Halo1 Send Down D->H: Offset=%" PRIu64 ", Count=%" PRIu64 "\n", rank, (uint64_t)inputOffsetElements, (uint64_t)haloElementCount);
+                  CUDA_CHECK(cudaMemcpy(h_send_buffer_down.data(), d_input_padded1 + inputOffsetElements, inputHalo1SizeBytes, cudaMemcpyDeviceToHost));
+                  MPI_Isend(h_send_buffer_down.data(), haloElementCount, MPI_FLOAT, partner_up, tag_down, MPI_COMM_WORLD, &send_req_down);
+             } else { fprintf(stderr, "[Rank %d] Error: Halo1 send down offset invalid or out of bounds (Offset=%" PRId64 ", Count=%d, Size=%" PRIu64").\n", rank, (int64_t)inputOffsetElements, haloElementCount, (uint64_t)inputPadded1Size); MPI_Abort(MPI_COMM_WORLD, 1); }
+         }
+
+        MPI_Status status;
+        if (hasTopHalo) {
+            MPI_Wait(&recv_req_up, &status);
+             if (d_input_padded1 != nullptr && inputHalo1SizeBytes > 0) {
+                 if (inputHalo1SizeBytes > inputPadded1Size * sizeof(float)) { fprintf(stderr, "[Rank %d] Error: Halo1 receive H->D dest buffer too small (top).\n", rank); MPI_Abort(MPI_COMM_WORLD, 1); }
+                 //fprintf(stderr, "[Rank %d] Halo1 Recv Up H->D: DestOffset=0, Count=%" PRIu64 "\n", rank, (uint64_t)haloElementCount);
+                 CUDA_CHECK(cudaMemcpy(d_input_padded1, h_recv_buffer_up.data(), inputHalo1SizeBytes, cudaMemcpyHostToDevice));
+             }
+             if (send_req_down != MPI_REQUEST_NULL) MPI_Wait(&send_req_down, &status);
+        }
+        if (hasBotHalo) {
+            MPI_Wait(&recv_req_down, &status);
+            size_t bottomHaloOffsetElements = inputOffsetElements + (localInputSizeBytes / sizeof(float));
+             if (d_input_padded1 != nullptr && inputHalo1SizeBytes > 0 && bottomHaloOffsetElements + haloElementCount <= inputPadded1Size) {
+                  //fprintf(stderr, "[Rank %d] Halo1 Recv Down H->D: DestOffset=%" PRIu64 ", Count=%" PRIu64 "\n", rank, (uint64_t)bottomHaloOffsetElements, (uint64_t)haloElementCount);
+                  CUDA_CHECK(cudaMemcpy(d_input_padded1 + bottomHaloOffsetElements, h_recv_buffer_down.data(), inputHalo1SizeBytes, cudaMemcpyHostToDevice));
+             } else if (inputHalo1SizeBytes > 0) { fprintf(stderr, "[Rank %d] Error: Halo1 receive down offset out of bounds or null buffer (Offset=%" PRId64 ", Count=%d, Size=%" PRIu64").\n", rank, (int64_t)bottomHaloOffsetElements, haloElementCount, (uint64_t)inputPadded1Size); MPI_Abort(MPI_COMM_WORLD, 1); }
+             if (send_req_up != MPI_REQUEST_NULL) MPI_Wait(&send_req_up, &status);
+        }
+    }
+skip_halo1:;
+
+
+    // --- 5. Execute Block 1 Kernels ---
+     if (Hc1 > 0 && Wc1 > 0 && C1 > 0 && d_conv1_out && d_input_padded1 && d_weights1 && d_biases1) {
+         //fprintf(stderr, "[Rank %d] Launching Conv1: H=%d, W=%d, C=%d -> K=%d, F=%d, S=%d, P=%d\n", rank, paddedH1, W, C, p1.K, p1.F, p1.S, p1.P);
+         cudaConvLayer(d_conv1_out, d_input_padded1, d_weights1, d_biases1, paddedH1, W, C, p1.K, p1.F, p1.S, p1.P);
+         cudaReluLayer(d_conv1_out, conv1OutSize);
+     }
+     if (Hp1 > 0 && Wp1 > 0 && C1 > 0 && d_pool1_out && d_conv1_out) {
+         //fprintf(stderr, "[Rank %d] Launching Pool1: H=%d, W=%d, C=%d -> Fp=%d, Sp=%d\n", rank, Hc1, Wc1, C1, p1.F_pool, p1.S_pool);
+         cudaMaxPoolLayer(d_pool1_out, d_conv1_out, Hc1, Wc1, C1, p1.F_pool, p1.S_pool);
+     }
+
+
+    // --- 6. Halo Exchange for Conv2 ---
+    size_t pool1RowSizeBytes = (Wp1 > 0 && C1 > 0) ? (size_t)Wp1 * C1 * sizeof(float) : 0;
+    if (haloRows2 > 0 && validHp1 > 0 && pool1RowSizeBytes > 0 && d_pool1_out) {
+        MPI_Request send_req_up = MPI_REQUEST_NULL, recv_req_up = MPI_REQUEST_NULL;
+        MPI_Request send_req_down = MPI_REQUEST_NULL, recv_req_down = MPI_REQUEST_NULL;
+
+        size_t pool1HaloSizeBytes = (size_t)haloRows2 * pool1RowSizeBytes;
+        if (haloRows2 > 0 && pool1RowSizeBytes > SIZE_MAX / (unsigned long)haloRows2) { fprintf(stderr, "[Rank %d] Error: pool1HaloSizeBytes calculation overflow.\n", rank); MPI_Abort(MPI_COMM_WORLD, 1); }
+        if (pool1HaloSizeBytes == 0) goto skip_halo2;
+
+        std::vector<float> h_send_buffer_up(pool1HaloSizeBytes / sizeof(float));
+        std::vector<float> h_recv_buffer_up(pool1HaloSizeBytes / sizeof(float));
+        std::vector<float> h_send_buffer_down(pool1HaloSizeBytes / sizeof(float));
+        std::vector<float> h_recv_buffer_down(pool1HaloSizeBytes / sizeof(float));
+
+        int partner_up = rank - 1; int partner_down = rank + 1;
+        int tag_up = 2; int tag_down = 3;
+        int haloElementCount = pool1HaloSizeBytes / sizeof(float);
+        if (haloElementCount <= 0) goto skip_halo2;
+
+        //fprintf(stderr, "[Rank %d] Halo2: Exchanging %d elements (haloRows2=%d).\n", rank, haloElementCount, haloRows2);
+
+        size_t pool1ValidDataOffsetBytes = (size_t)trimTop1 * pool1RowSizeBytes;
+        if (pool1ValidDataOffsetBytes > pool1OutSize * sizeof(float)) { fprintf(stderr, "[Rank %d] Error: Halo2 trimTop1 offset (%" PRIu64 ") out of bounds (%" PRIu64 ").\n", rank, (uint64_t)pool1ValidDataOffsetBytes, (uint64_t)(pool1OutSize * sizeof(float))); MPI_Abort(MPI_COMM_WORLD, 1); }
+        float* d_pool1_valid_start = d_pool1_out + pool1ValidDataOffsetBytes / sizeof(float);
+        size_t pool1ValidDataSizeBytes = (size_t)validHp1 * pool1RowSizeBytes;
+         if (pool1ValidDataOffsetBytes + pool1ValidDataSizeBytes > pool1OutSize * sizeof(float)) { fprintf(stderr, "[Rank %d] Error: Halo2 valid data region (offset %" PRIu64 ", size %" PRIu64 ") exceeds buffer bounds (%" PRIu64 ").\n", rank, (uint64_t)pool1ValidDataOffsetBytes, (uint64_t)pool1ValidDataSizeBytes, (uint64_t)(pool1OutSize * sizeof(float))); MPI_Abort(MPI_COMM_WORLD, 1); }
+
+        if (hasTopHalo2) { MPI_Irecv(h_recv_buffer_up.data(), haloElementCount, MPI_FLOAT, partner_up, tag_up, MPI_COMM_WORLD, &recv_req_up); }
+        if (hasBotHalo2) { MPI_Irecv(h_recv_buffer_down.data(), haloElementCount, MPI_FLOAT, partner_down, tag_down, MPI_COMM_WORLD, &recv_req_down); }
+
+        if (hasBotHalo2) { // Send my bottom rows up
+            size_t sendOffsetBytes = pool1ValidDataSizeBytes - pool1HaloSizeBytes;
+             if (pool1HaloSizeBytes > pool1ValidDataSizeBytes) { // || sendOffsetBytes > pool1ValidDataSizeBytes // Offset check implicit in next check
+                 fprintf(stderr, "[Rank %d] Error: Halo2 send offset calculation error (bottom). ValidSize=%" PRIu64 ", HaloSize=%" PRIu64 "\n", rank, (uint64_t)pool1ValidDataSizeBytes, (uint64_t)pool1HaloSizeBytes); MPI_Abort(MPI_COMM_WORLD, 1);
+             }
+             if (pool1ValidDataOffsetBytes + sendOffsetBytes + pool1HaloSizeBytes > pool1OutSize * sizeof(float)) { fprintf(stderr, "[Rank %d] Error: Halo2 send D->H source out of bounds (bottom).\n", rank); MPI_Abort(MPI_COMM_WORLD, 1); }
+            //fprintf(stderr, "[Rank %d] Halo2 Send Up D->H: Offset=%" PRIu64 ", Count=%" PRIu64 "\n", rank, (uint64_t)(pool1ValidDataOffsetBytes/sizeof(float) + sendOffsetBytes/sizeof(float)), (uint64_t)haloElementCount);
+            CUDA_CHECK(cudaMemcpy(h_send_buffer_up.data(), d_pool1_valid_start + sendOffsetBytes / sizeof(float), pool1HaloSizeBytes, cudaMemcpyDeviceToHost));
+            MPI_Isend(h_send_buffer_up.data(), haloElementCount, MPI_FLOAT, partner_down, tag_up, MPI_COMM_WORLD, &send_req_up);
+        }
+         if (hasTopHalo2) { // Send my top rows down
+              if (pool1HaloSizeBytes > pool1ValidDataSizeBytes) { fprintf(stderr, "[Rank %d] Error: Halo2 send D->H source size error (top - halo > valid). ValidSize=%" PRIu64 ", HaloSize=%" PRIu64 "\n", rank, (uint64_t)pool1ValidDataSizeBytes, (uint64_t)pool1HaloSizeBytes); MPI_Abort(MPI_COMM_WORLD, 1); }
+               if (pool1ValidDataOffsetBytes + pool1HaloSizeBytes > pool1OutSize * sizeof(float)) { fprintf(stderr, "[Rank %d] Error: Halo2 send D->H source out of bounds (top - offset+halo > total).\n", rank); MPI_Abort(MPI_COMM_WORLD, 1); }
+             //fprintf(stderr, "[Rank %d] Halo2 Send Down D->H: Offset=%" PRIu64 ", Count=%" PRIu64 "\n", rank, (uint64_t)(pool1ValidDataOffsetBytes/sizeof(float)), (uint64_t)haloElementCount);
+             CUDA_CHECK(cudaMemcpy(h_send_buffer_down.data(), d_pool1_valid_start, pool1HaloSizeBytes, cudaMemcpyDeviceToHost));
+             MPI_Isend(h_send_buffer_down.data(), haloElementCount, MPI_FLOAT, partner_up, tag_down, MPI_COMM_WORLD, &send_req_down);
+         }
+
+        size_t input2CurrentOffsetBytes = 0;
+        if (hasTopHalo2) {
+             MPI_Wait(&recv_req_up, MPI_STATUS_IGNORE);
+             if (d_input_padded2 != nullptr && pool1HaloSizeBytes > 0 && pool1HaloSizeBytes <= inputPadded2Size * sizeof(float)) {
+                  //fprintf(stderr, "[Rank %d] Halo2 Recv Up H->D: DestOffset=0, Count=%" PRIu64 "\n", rank, (uint64_t)haloElementCount);
+                  CUDA_CHECK(cudaMemcpy(d_input_padded2, h_recv_buffer_up.data(), pool1HaloSizeBytes, cudaMemcpyHostToDevice));
+             } else if (pool1HaloSizeBytes > 0) { fprintf(stderr, "[Rank %d] Error: Halo2 receive H->D dest out of bounds or null buffer (top).\n", rank); MPI_Abort(MPI_COMM_WORLD, 1); }
+             input2CurrentOffsetBytes += pool1HaloSizeBytes;
+             if (send_req_down != MPI_REQUEST_NULL) MPI_Wait(&send_req_down, MPI_STATUS_IGNORE);
+        }
+        if (validHp1 > 0 && pool1ValidDataSizeBytes > 0 && d_input_padded2 != nullptr) {
+            if (input2CurrentOffsetBytes + pool1ValidDataSizeBytes > inputPadded2Size * sizeof(float)) { fprintf(stderr, "[Rank %d] Error: Halo2 D->D copy destination out of bounds. Offset=%" PRIu64 ", CopySize=%" PRIu64 ", BufferSize=%" PRIu64 "\n", rank, (uint64_t)input2CurrentOffsetBytes, (uint64_t)pool1ValidDataSizeBytes, (uint64_t)(inputPadded2Size * sizeof(float))); MPI_Abort(MPI_COMM_WORLD, 1); }
+             //fprintf(stderr, "[Rank %d] Halo2 Copy Valid D->D: DestOffset=%" PRIu64 ", SrcOffset=%" PRIu64 ", Count=%" PRIu64 "\n", rank, (uint64_t)(input2CurrentOffsetBytes / sizeof(float)), (uint64_t)(pool1ValidDataOffsetBytes / sizeof(float)), (uint64_t)(pool1ValidDataSizeBytes / sizeof(float)));
+             CUDA_CHECK(cudaMemcpy(d_input_padded2 + input2CurrentOffsetBytes / sizeof(float), d_pool1_valid_start, pool1ValidDataSizeBytes, cudaMemcpyDeviceToDevice));
+             input2CurrentOffsetBytes += pool1ValidDataSizeBytes;
+        }
+        if (hasBotHalo2) {
+            MPI_Wait(&recv_req_down, MPI_STATUS_IGNORE);
+             if (d_input_padded2 != nullptr && pool1HaloSizeBytes > 0 && input2CurrentOffsetBytes + pool1HaloSizeBytes <= inputPadded2Size * sizeof(float)) {
+                  //fprintf(stderr, "[Rank %d] Halo2 Recv Down H->D: DestOffset=%" PRIu64 ", Count=%" PRIu64 "\n", rank, (uint64_t)(input2CurrentOffsetBytes / sizeof(float)), (uint64_t)haloElementCount);
+                  CUDA_CHECK(cudaMemcpy(d_input_padded2 + input2CurrentOffsetBytes / sizeof(float), h_recv_buffer_down.data(), pool1HaloSizeBytes, cudaMemcpyHostToDevice));
+             } else if (pool1HaloSizeBytes > 0) { fprintf(stderr, "[Rank %d] Error: Halo2 receive H->D dest out of bounds or null buffer (bottom).\n", rank); MPI_Abort(MPI_COMM_WORLD, 1); }
+             if (send_req_up != MPI_REQUEST_NULL) MPI_Wait(&send_req_up, MPI_STATUS_IGNORE);
+        }
+
+    } else if (validHp1 > 0 && pool1RowSizeBytes > 0 && d_pool1_out && d_input_padded2) {
+        // Case: No halo exchange needed, copy valid data directly D->D
+        size_t pool1ValidDataOffsetBytes = (size_t)trimTop1 * pool1RowSizeBytes;
+        float* d_pool1_valid_start = d_pool1_out + pool1ValidDataOffsetBytes / sizeof(float);
+        size_t pool1ValidDataSizeBytes = (size_t)validHp1 * pool1RowSizeBytes;
+         if (pool1ValidDataOffsetBytes + pool1ValidDataSizeBytes > pool1OutSize * sizeof(float)) { fprintf(stderr, "[Rank %d] Error: Halo2 D->D source bounds error (no halo case).\n", rank); MPI_Abort(MPI_COMM_WORLD, 1); }
+         if (pool1ValidDataSizeBytes > inputPadded2Size * sizeof(float)) { fprintf(stderr, "[Rank %d] Error: Halo2 D->D destination bounds error (no halo case).\n", rank); MPI_Abort(MPI_COMM_WORLD, 1); }
+        if (pool1ValidDataSizeBytes > 0) {
+            //fprintf(stderr, "[Rank %d] Halo2 Copy Valid D->D (No Halo): DestOffset=0, SrcOffset=%" PRIu64 ", Count=%" PRIu64 "\n", rank, (uint64_t)(pool1ValidDataOffsetBytes / sizeof(float)), (uint64_t)(pool1ValidDataSizeBytes / sizeof(float)));
+            CUDA_CHECK(cudaMemcpy(d_input_padded2, d_pool1_valid_start, pool1ValidDataSizeBytes, cudaMemcpyDeviceToDevice));
+        }
+    } else if (d_input_padded2 && inputPadded2Size > 0) {
+        // Case: No valid input data, zero out the buffer for layer 2
+        //fprintf(stderr, "[Rank %d] Halo2: Zeroing d_input_padded2 (size %" PRIu64 ").\n", rank, (uint64_t)inputPadded2Size);
+        CUDA_CHECK(cudaMemset(d_input_padded2, 0, inputPadded2Size * sizeof(float)));
+    }
+skip_halo2:;
+
+
+    // --- 7. Execute Block 2 Kernels ---
+     if (Hc2 > 0 && Wc2 > 0 && C2 > 0 && d_conv2_out && d_input_padded2 && d_weights2 && d_biases2) {
+        //fprintf(stderr, "[Rank %d] Launching Conv2: H=%d, W=%d, C=%d -> K=%d, F=%d, S=%d, P=%d\n", rank, paddedH2, Wp1, C1, p2.K, p2.F, p2.S, p2.P);
+        cudaConvLayer(d_conv2_out, d_input_padded2, d_weights2, d_biases2, paddedH2, Wp1, C1, p2.K, p2.F, p2.S, p2.P);
+        cudaReluLayer(d_conv2_out, conv2OutSize);
+    }
+     if (Hp2 > 0 && Wp2 > 0 && C2 > 0 && d_pool2_out && d_conv2_out) {
+        //fprintf(stderr, "[Rank %d] Launching Pool2: H=%d, W=%d, C=%d -> Fp=%d, Sp=%d\n", rank, Hc2, Wc2, C2, p2.F_pool, p2.S_pool);
+        cudaMaxPoolLayer(d_pool2_out, d_conv2_out, Hc2, Wc2, C2, p2.F_pool, p2.S_pool);
+     }
+     if (Hp2 > 0 && Wp2 > 0 && C2 > 0 && d_lrn2_out && d_pool2_out) {
+        //fprintf(stderr, "[Rank %d] Launching LRN2: H=%d, W=%d, C=%d\n", rank, Hp2, Wp2, C2);
+        cudaLRNLayer(d_lrn2_out, d_pool2_out, Hp2, Wp2, C2, p2.N_lrn, p2.alpha, p2.beta, p2.k_lrn);
+     }
+
+
+    // --- 8. Copy Final Result Device -> Host ---
+    size_t finalRowSizeBytes = (Wp2 > 0 && C2 > 0) ? (size_t)Wp2 * C2 * sizeof(float) : 0;
+    size_t finalLocalSizeBytes = (size_t)finalLocalH * finalRowSizeBytes;
+
+    if (finalLocalSizeBytes > 0 && finalLocalH > 0) {
+         // Check for potential overflow before resize
+        if ((unsigned long)finalLocalH > SIZE_MAX / ((unsigned long)Wp2*C2) ) {
+             fprintf(stderr, "[Rank %d] Error: Final output size calculation overflow before resize.\n", rank); MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+         h_localOutput.resize(finalLocalSizeBytes / sizeof(float));
+    } else {
+         h_localOutput.clear();
+         finalLocalSizeBytes = 0;
+    }
+
+    if (finalLocalH > 0 && finalLocalSizeBytes > 0 && d_lrn2_out != nullptr) {
+        size_t finalDataOffsetBytes = (size_t)trimTop2 * finalRowSizeBytes;
+        if (finalDataOffsetBytes + finalLocalSizeBytes > lrn2OutSize * sizeof(float)) {
+             fprintf(stderr, "[Rank %d] Error: Final D->H copy source (offset %" PRIu64 ", size %" PRIu64 ") out of bounds (%" PRIu64 "). finalLocalH=%d, trimTop2=%d, Hp2=%d, Wp2=%d, C2=%d\n", rank, (uint64_t)finalDataOffsetBytes, (uint64_t)finalLocalSizeBytes, (uint64_t)(lrn2OutSize * sizeof(float)), finalLocalH, trimTop2, Hp2, Wp2, C2); MPI_Abort(MPI_COMM_WORLD, 1);
+          }
+        //fprintf(stderr, "[Rank %d] Final D->H: DestSize=%" PRIu64 ", SrcOffset=%" PRIu64 ", CopySize=%" PRIu64 "\n", rank, (uint64_t)h_localOutput.size(), (uint64_t)(finalDataOffsetBytes / sizeof(float)), (uint64_t)(finalLocalSizeBytes / sizeof(float)));
+        CUDA_CHECK(cudaMemcpy(h_localOutput.data(), d_lrn2_out + finalDataOffsetBytes / sizeof(float), finalLocalSizeBytes, cudaMemcpyDeviceToHost));
+    }
+
+    // --- 9. Free Device Memory ---
+    if (d_input_padded1) cudaFree(d_input_padded1);
+    if (d_conv1_out)     cudaFree(d_conv1_out);
+    if (d_pool1_out)     cudaFree(d_pool1_out);
+    if (d_input_padded2) cudaFree(d_input_padded2);
+    if (d_conv2_out)     cudaFree(d_conv2_out);
+    if (d_pool2_out)     cudaFree(d_pool2_out);
+    if (d_lrn2_out)      cudaFree(d_lrn2_out);
+    if (d_weights1)      cudaFree(d_weights1);
+    if (d_biases1)       cudaFree(d_biases1);
+    if (d_weights2)      cudaFree(d_weights2);
+    if (d_biases2)       cudaFree(d_biases2);
+
+} // End of alexnetForwardPassMPI_CUDA definition
+
 ================================================================================
 
-=== FILE: final_project/v3_cuda_only/src/layers_cuda.cu ===
+=== FILE: final_project/v4_mpi_cuda/src/layers_mpi_cuda.cu ===
 
-#include <cstdio>         // for fprintf, stderr
-#include <cstdlib>        // for exit
-#include <cmath>          // for fmaxf, powf
+#include <cstdio>         // For fprintf, stderr in CUDA_CHECK
+#include <cstdlib>        // For exit in CUDA_CHECK
+#include <cmath>          // For fmaxf, powf, max, min
 #include <cuda_runtime.h>
-#include "../include/layers.hpp"
+#include <mpi.h>          // Needed for MPI_Abort in CUDA_CHECK
+#include <cstddef>        // Include for size_t
 
-// Macro to check CUDA calls
+#include "../include/layers.hpp" // Function prototypes being implemented
+
+// Added definitions for convOutDim and poolOutDim for CUDA kernels
+__host__ __device__ inline int convOutDim(int D, int F, int P, int S) {
+    return (D + 2 * P - F) / S + 1;
+}
+
+__host__ __device__ inline int poolOutDim(int D, int F, int S) {
+    return (D - F) / S + 1;
+}
+
+// Macro to check CUDA calls - ABORTS using MPI for coordinated shutdown
 #define CUDA_CHECK(call)                                    \
   do {                                                      \
     cudaError_t err = call;                                 \
     if(err != cudaSuccess) {                                \
-      std::fprintf(stderr,                                  \
-        "CUDA error %s:%d '%s'\n",                         \
-        __FILE__, __LINE__, cudaGetErrorString(err));       \
-      std::exit(1);                                         \
+      int rank_for_error; MPI_Comm_rank(MPI_COMM_WORLD, &rank_for_error); \
+      fprintf(stderr,                                       \
+        "[Rank %d] CUDA error in %s:%d: %s (%d)\n",         \
+         rank_for_error, __FILE__, __LINE__, cudaGetErrorString(err), err); \
+      fflush(stderr); /* Ensure message prints before abort */ \
+      MPI_Abort(MPI_COMM_WORLD, err);                       \
     }                                                       \
   } while(0)
 
-// Conv kernel (one thread per output element)
+// --- Helper Functions (Device) ---
+// Optional: Define __device__ helpers if needed by kernels, e.g., index calculation
+
+// --- Kernel Implementations ---
+// These kernels are identical to V3, with the pooling index fix
+
+// Conv kernel (one thread per output element: Ho * Wo * K)
 __global__ void convKernel(
-    float* out, const float* in, const float* w, const float* b,
+    float* __restrict__ out, const float* __restrict__ in,
+    const float* __restrict__ w, const float* __restrict__ b,
     int H, int W, int C, int K, int F, int S, int P,
     int Ho, int Wo)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if(idx >= Ho*Wo*K) return;
+    int total_outputs = Ho * Wo * K;
 
-    int k = idx % K;
-    int tmp = idx / K;
-    int x = tmp % Wo;
-    int y = tmp / Wo;
+    if (idx >= total_outputs) return;
 
-    float sum = 0.0f;
-    for(int c=0;c<C;++c)
-    for(int fy=0;fy<F;++fy)
-    for(int fx=0;fx<F;++fx) {
-        int in_y = y*S + fy - P;
-        int in_x = x*S + fx - P;
-        if(in_y>=0 && in_y<H && in_x>=0 && in_x<W) {
-            int in_idx = ((in_y*W)+in_x)*C + c;
-            int w_idx  = ((k*C + c)*F + fy)*F + fx;
-            sum += in[in_idx] * w[w_idx];
+    // Calculate output coordinates (k, y, x) from global thread index
+    int k = idx % K;          // Output channel index
+    int temp = idx / K;
+    int x = temp % Wo;        // Output column index
+    int y = temp / Wo;        // Output row index
+
+    float sum = 0.0f; // Use float for intermediate sum
+
+    // Corresponding input top-left corner coordinates
+    int start_y = y * S - P;
+    int start_x = x * S - P;
+
+    // Iterate over input channels and filter dimensions
+    for (int c = 0; c < C; ++c) {
+        for (int fy = 0; fy < F; ++fy) {
+            int current_y = start_y + fy;
+            for (int fx = 0; fx < F; ++fx) {
+                int current_x = start_x + fx;
+
+                // Check bounds: only process valid input pixels
+                if (current_y >= 0 && current_y < H && current_x >= 0 && current_x < W) {
+                    // Calculate 1D indices
+                    // Input index: (batch=0 implicitly) height, width, channel
+                    // Use size_t for intermediate calculations to avoid overflow with large dimensions
+                    size_t in_idx = ((size_t)current_y * W + current_x) * C + c;
+                    // Weight index: output_channel, input_channel, filter_y, filter_x
+                    size_t w_idx = (((size_t)k * C + c) * F + fy) * F + fx;
+
+                    // Accumulate product
+                    sum += in[in_idx] * w[w_idx];
+                }
+                // Pixels outside bounds (due to padding) contribute 0, so no `else` needed
+            }
         }
     }
+
+    // Add bias (once per output element) and store result
     out[idx] = sum + b[k];
 }
 
+
+// ReLU kernel (elementwise, in-place)
+__global__ void reluKernel(float* data, size_t N) {
+    size_t i = static_cast<size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (i < N) {
+        data[i] = fmaxf(0.0f, data[i]);
+    }
+}
+
+// Max-pooling kernel (one thread per output element: Hp * Wp * C)
+__global__ void poolKernel(
+    float* __restrict__ out, const float* __restrict__ in,
+    int H, int W, int C,  // Input dimensions
+    int Fp, int Sp,       // Pooling parameters (Filter size, Stride)
+    int Hp, int Wp)       // Output dimensions
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total_outputs = Hp * Wp * C;
+
+    if (idx >= total_outputs) return;
+
+    // Calculate output coordinates (c, y, x)
+    int c = idx % C;
+    int temp = idx / C;
+    // *** Corrected y calculation ***
+    int y = temp / Wp; // Integer division gives row index
+    int x = temp % Wp; // Modulo gives column index
+
+
+    // Find top-left corner of the pooling window in the input
+    int start_y = y * Sp;
+    int start_x = x * Sp;
+
+    float max_val = -INFINITY; // Initialize with negative infinity
+
+    // Iterate over the pooling window (Fp x Fp)
+    for (int fy = 0; fy < Fp; ++fy) {
+        int current_y = start_y + fy;
+        // Ensure we don't go out of input bounds vertically
+        if (current_y >= H) continue;
+
+        for (int fx = 0; fx < Fp; ++fx) {
+            int current_x = start_x + fx;
+             // Ensure we don't go out of input bounds horizontally
+             if (current_x >= W) continue;
+
+            // Calculate 1D index in the input tensor
+            // Use size_t for intermediate calculations
+            size_t in_idx = ((size_t)current_y * W + current_x) * C + c;
+
+            // Update maximum value
+            max_val = fmaxf(max_val, in[in_idx]);
+        }
+    }
+
+    // Store the maximum value found in the output tensor
+    out[idx] = max_val;
+}
+
+
+// LRN kernel (naive cross-channel)
+__global__ void lrnKernel(
+    float* __restrict__ out, const float* __restrict__ in,
+    int H, int W, int C, // Input dimensions
+    int N_lrn, float alpha, float beta, float k) // LRN parameters
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total_elements = H * W * C;
+
+    if (idx >= total_elements) return;
+
+    // Calculate coordinates (c, y, x)
+    int c = idx % C;
+    int temp = idx / C;
+    int x = temp % W;
+    int y = temp / W;
+
+    // Calculate the sum of squares within the local neighborhood across channels
+    float sum_sq = 0.0f;
+    int half_N = N_lrn / 2;
+    int c_start = max(0, c - half_N);
+    int c_end = min(C - 1, c + half_N); // Inclusive end
+
+    for (int channel_i = c_start; channel_i <= c_end; ++channel_i) {
+         // Use size_t for intermediate calculations
+        size_t neighbor_idx = ((size_t)y * W + x) * C + channel_i;
+        float val = in[neighbor_idx];
+        sum_sq += val * val;
+    }
+
+    // Calculate the normalization factor
+    // Using the common implementation approach (alpha not divided by N)
+     float scale = k + alpha * sum_sq;
+
+    // Apply normalization: out = in / (scale ^ beta)
+    // Avoid division by zero or negative scale if beta is fractional
+    if (scale <= 0.0f && beta > 0.0f && beta != 1.0f) {
+         // Handle error case: e.g., set output to 0 or clamp scale
+         out[idx] = 0.0f; // Or potentially in[idx] depending on desired behavior
+    } else {
+         out[idx] = in[idx] * powf(scale, -beta); // Use powf for float exponentiation
+    }
+}
+
+
+// --- Kernel Launcher Functions ---
+// These are host functions that set up grid/block dimensions and launch kernels.
+// ** Function Definitions **
+
+// Definition for cudaConvLayer
 void cudaConvLayer(
     float* d_output,
     const float* d_input,
@@ -1442,185 +1034,101 @@ void cudaConvLayer(
     int H, int W, int C,
     const int K, const int F, const int S, const int P)
 {
-    int Ho = (H + 2*P - F)/S + 1;
-    int Wo = (W + 2*P - F)/S + 1;
-    int total = Ho*Wo*K;
-    int block = 256, grid = (total+block-1)/block;
-    convKernel<<<grid,block>>>(d_output,d_input,d_weights,d_biases,
-        H,W,C,K,F,S,P,Ho,Wo);
+    // Calculate output dimensions using helper (robust check)
+    int Ho = convOutDim(H, F, P, S);
+    int Wo = convOutDim(W, F, P, S);
+
+    if (Ho <= 0 || Wo <= 0 || K <= 0) {
+         // Output dimensions are zero or negative, or no filters. Nothing to compute.
+         // Ensure output buffer is zeroed if necessary, or just return.
+         // If d_output was allocated based on these dims, it might be nullptr or size 0.
+         // Optionally print a warning:
+         // fprintf(stderr, "Warning: ConvLayer output size is zero or negative (Ho=%d, Wo=%d, K=%d). Skipping kernel launch.\n", Ho, Wo, K);
+         return;
+     }
+
+    int total_outputs = Ho * Wo * K;
+    int threads_per_block = 256; // Common choice, tune based on GPU architecture
+    // Calculate grid size, ensuring it covers all outputs
+    int blocks_per_grid = (total_outputs + threads_per_block - 1) / threads_per_block;
+
+    convKernel<<<blocks_per_grid, threads_per_block>>>(
+        d_output, d_input, d_weights, d_biases,
+        H, W, C, K, F, S, P, Ho, Wo);
+    CUDA_CHECK(cudaGetLastError()); // Check for launch configuration errors
+    // Optional: Synchronize if needed immediately after kernel
+    // CUDA_CHECK(cudaDeviceSynchronize());
+}
+
+// Definition for cudaReluLayer
+void cudaReluLayer(float* d_data, size_t N) {
+     if (N == 0 || d_data == nullptr) return; // Nothing to do
+    int threads_per_block = 256;
+    // Use size_t for N, cast carefully for grid calculation if N is very large
+    // Standard approach assumes N fits within reasonable limits for grid calculation
+    int blocks_per_grid = (N + threads_per_block - 1) / threads_per_block;
+
+    reluKernel<<<blocks_per_grid, threads_per_block>>>(d_data, N);
     CUDA_CHECK(cudaGetLastError());
+    // CUDA_CHECK(cudaDeviceSynchronize());
 }
 
-// ReLU
-__global__ void reluKernel(float* data, int N) {
-    int i = blockIdx.x*blockDim.x + threadIdx.x;
-    if(i<N) data[i] = fmaxf(0.0f, data[i]);
-}
-
-void cudaReluLayer(float* d_data, int N) {
-    int block = 256, grid = (N+block-1)/block;
-    reluKernel<<<grid,block>>>(d_data,N);
-    CUDA_CHECK(cudaGetLastError());
-}
-
-// Max‐pool
-__global__ void poolKernel(
-    float* out, const float* in,
-    int H, int W, int C,
-    int Fp, int Sp,
-    int Hp, int Wp)
-{
-    int idx = blockIdx.x*blockDim.x + threadIdx.x;
-    if(idx>=Hp*Wp*C) return;
-
-    int c = idx % C;
-    int tmp = idx / C;
-    int x = tmp % Wp;
-    int y = tmp / Wp;
-
-    float mx = -1e20f;
-    for(int fy=0;fy<Fp;++fy)
-    for(int fx=0;fx<Fp;++fx){
-        int in_y = y*Sp + fy;
-        int in_x = x*Sp + fx;
-        int in_idx = ((in_y*W)+in_x)*C + c;
-        mx = fmaxf(mx, in[in_idx]);
-    }
-    out[idx] = mx;
-}
-
+// Definition for cudaMaxPoolLayer
 void cudaMaxPoolLayer(
     float* d_output,
     const float* d_input,
     int H, int W, int C,
     int F_pool, int S_pool)
 {
-    int Hp = (H - F_pool)/S_pool + 1;
-    int Wp = (W - F_pool)/S_pool + 1;
-    int total = Hp*Wp*C;
-    int block = 256, grid = (total+block-1)/block;
-    poolKernel<<<grid,block>>>(d_output,d_input,
-        H,W,C,F_pool,S_pool,Hp, Wp);
+     // Calculate output dimensions using helper (robust check)
+    int Hp = poolOutDim(H, F_pool, S_pool);
+    int Wp = poolOutDim(W, F_pool, S_pool);
+
+
+    if (Hp <= 0 || Wp <= 0 || C <= 0) {
+         // Output dimensions are zero or negative, or no channels. Nothing to compute.
+         // fprintf(stderr, "Warning: MaxPoolLayer output size is zero or negative (Hp=%d, Wp=%d, C=%d). Skipping kernel launch.\n", Hp, Wp, C);
+         return;
+     }
+
+    int total_outputs = Hp * Wp * C;
+    int threads_per_block = 256;
+    int blocks_per_grid = (total_outputs + threads_per_block - 1) / threads_per_block;
+
+    poolKernel<<<blocks_per_grid, threads_per_block>>>(
+        d_output, d_input,
+        H, W, C,
+        F_pool, S_pool,
+        Hp, Wp);
     CUDA_CHECK(cudaGetLastError());
+    // CUDA_CHECK(cudaDeviceSynchronize());
 }
 
-// LRN (naive cross‐channel)
-__global__ void lrnKernel(
-    float* out, const float* in,
-    int H, int W, int C, int N,
-    float alpha, float beta, float k)
-{
-    int idx = blockIdx.x*blockDim.x + threadIdx.x;
-    if(idx>=H*W*C) return;
-
-    int c = idx % C;
-    int tmp = idx / C;
-    int x = tmp % W;
-    int y = tmp / W;
-
-    float sum = 0.0f;
-    int half = N/2;
-    for(int cc = max(0,c-half); cc<=min(C-1,c+half); ++cc) {
-        int ii = ((y*W)+x)*C + cc;
-        sum += in[ii]*in[ii];
-    }
-    out[idx] = in[idx] / powf(k + alpha*sum, beta);
-}
-
+// Definition for cudaLRNLayer
 void cudaLRNLayer(
     float* d_output,
     const float* d_input,
     int H, int W, int C,
     int N, float alpha, float beta, float k)
 {
-    int total = H*W*C;
-    int block = 256, grid = (total+block-1)/block;
-    lrnKernel<<<grid,block>>>(d_output,d_input,
-        H,W,C,N,alpha,beta,k);
+    if (H <= 0 || W <= 0 || C <= 0 || N <= 0) {
+         // Invalid dimensions or LRN window size.
+         // fprintf(stderr, "Warning: LRNLayer input size or N is zero or negative. Skipping kernel launch.\n");
+         // If output must match input size, consider copying input to output here.
+         if (d_output != d_input && H*W*C > 0) { // Avoid self-copy
+             CUDA_CHECK(cudaMemcpy(d_output, d_input, (size_t)H*W*C*sizeof(float), cudaMemcpyDeviceToDevice));
+         }
+         return;
+     }
+    int total_elements = H * W * C;
+    int threads_per_block = 256;
+    int blocks_per_grid = (total_elements + threads_per_block - 1) / threads_per_block;
+
+    lrnKernel<<<blocks_per_grid, threads_per_block>>>(
+        d_output, d_input,
+        H, W, C, N, alpha, beta, k);
     CUDA_CHECK(cudaGetLastError());
+    // CUDA_CHECK(cudaDeviceSynchronize());
 }
-
-
-================================================================================
-
-=== FILE: final_project/v4_mpi_cuda/Makefile ===
-
-
-
-================================================================================
-
-=== FILE: final_project/v4_mpi_cuda/include/alexnet.hpp ===
-
-*** File Not Found ***
-
-
-================================================================================
-
-=== FILE: final_project/v4_mpi_cuda/include/layers.hpp ===
-
-*** File Not Found ***
-
-
-================================================================================
-
-=== FILE: final_project/v4_mpi_cuda/src/main.cpp ===
-
-*** File Not Found ***
-
-
-================================================================================
-
-=== FILE: final_project/v4_mpi_cuda/src/alexnet_mpi_cuda.cu ===
-
-*** File Not Found ***
-
-
-================================================================================
-
-=== FILE: final_project/v4_mpi_cuda/src/layers_cuda.cu ===
-
-*** File Not Found ***
-
-
-================================================================================
-
-=== FILE: final_project/v5_cuda_aware_mpi/Makefile ===
-
-
-
-================================================================================
-
-=== FILE: final_project/v5_cuda_aware_mpi/include/alexnet.hpp ===
-
-*** File Not Found ***
-
-
-================================================================================
-
-=== FILE: final_project/v5_cuda_aware_mpi/include/layers.hpp ===
-
-*** File Not Found ***
-
-
-================================================================================
-
-=== FILE: final_project/v5_cuda_aware_mpi/src/main.cpp ===
-
-*** File Not Found ***
-
-
-================================================================================
-
-=== FILE: final_project/v5_cuda_aware_mpi/src/alexnet_mpi_cuda.cu ===
-
-*** File Not Found ***
-
-
-================================================================================
-
-=== FILE: final_project/v5_cuda_aware_mpi/src/layers_cuda.cu ===
-
-*** File Not Found ***
-
 
 ================================================================================
