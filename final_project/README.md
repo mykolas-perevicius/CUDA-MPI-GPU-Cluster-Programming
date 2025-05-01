@@ -4,6 +4,8 @@ This directory contains the code, documentation, and resources for the final pro
 
 **Project Scope Clarification:** The primary focus of the V1-V5 implementation plan is on the **initial two blocks** of the AlexNet architecture (Conv1->ReLU->Pool1 and Conv2->ReLU->Pool2->LRN2). This provides a representative and computationally significant workload for learning and comparing parallelization techniques (MPI, CUDA, Hybrid). Implementing the *full* AlexNet network (including Conv3-5, FC6-8, Softmax) is considered an extension task to be undertaken only *after* the successful completion and analysis of V1-V5 for the initial subset, if time permits.
 
+![AlexNet Diagram](docs/1_M4jjkOPxvOYNk8f1c7rOcQ.png)
+
 ## Table of Contents
 1.  [Project Overview](#1-project-overview)
 2.  [Target Environment](#2-target-environment)
