@@ -1,4 +1,4 @@
 WARNING: Gathered size (33280) does not match expected final size (13x13x256 = 43264). Check trim/halo/layer logic.
 shape: 13x13x256
 Sample values: 29.2981 28.7552 28.2351 28.2351 28.2351
-Execution Time: 203.166 ms
+Execution Time: 281.809 ms

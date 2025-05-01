@@ -1,177 +1,160 @@
-// final_project/v4_mpi_cuda/src/main_mpi_cuda.cpp
+// === final_project/v4_mpi_cuda/src/main_mpi_cuda.cpp ===
+#include "alexnet.hpp"
 #include <mpi.h>
-#include <iostream>
-#include <vector>
-#include <numeric> // For std::accumulate
-#include <chrono>
-#include <algorithm> // For std::min
-#include <cmath>     // For std::ceil, std::max
 #include <cuda_runtime.h>
-#include <limits.h> // For INT_MAX
+#include <vector>
+#include <iostream>
+#include <algorithm>
+#include <chrono>
 
-#include "../include/alexnet.hpp" // Includes LayerParams, forward pass prototype, dim helpers
+#define CUDA_CHECK(x) do{cudaError_t e=(x);                     \
+  if(e!=cudaSuccess){int r;MPI_Comm_rank(MPI_COMM_WORLD,&r);    \
+    std::cerr<<"[Rank "<<r<<"] "<<cudaGetErrorString(e)<<"\n";  \
+    MPI_Abort(MPI_COMM_WORLD,1);} }while(0)
 
-// Simple helper to check CUDA calls from host code if needed (mainly used in .cu files)
-// In this .cpp file, major CUDA errors are more likely caught by MPI aborts triggered in alexnet_mpi_cuda.cu
-inline void hostCheckCUDA(cudaError_t err, const char* file, int line) {
-    if (err != cudaSuccess) {
-        // Ensure only one rank prints the error before aborting
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if (rank == 0) {
-             fprintf(stderr, "CUDA Error in host code at %s:%d - %s\n", file, line, cudaGetErrorString(err));
-             fflush(stderr);
-        }
-        MPI_Abort(MPI_COMM_WORLD, 1); // Use MPI_Abort for coordinated exit
+/*----------------------------------------------------------------*/
+static void runHybridMPI(int H,int W,int C,
+                         LayerParams& p1,LayerParams& p2)
+{
+    int rank,size; MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+    MPI_Comm_size(MPI_COMM_WORLD,&size);
+
+    /* ------------ root initialises full input ------------------ */
+    std::vector<float> full;
+    if(rank==0){
+        full.assign((size_t)H*W*C,1.f);
+        p1.weights.assign((size_t)p1.K*C*p1.F*p1.F,0.01f);
+        p1.biases .assign(p1.K,0.f);
+        p2.weights.assign((size_t)p2.K*p1.K*p2.F*p2.F,0.01f);
+        p2.biases .assign(p2.K,0.f);
     }
+
+    /* ------------ broadcast hyper-parameters ------------------- */
+    auto bI=[&](int& v){ MPI_Bcast(&v,1,MPI_INT ,0,MPI_COMM_WORLD); };
+    auto bF=[&](float& v){ MPI_Bcast(&v,1,MPI_FLOAT,0,MPI_COMM_WORLD); };
+
+    bI(p1.K);bI(p1.F);bI(p1.S);bI(p1.P);bI(p1.F_pool);bI(p1.S_pool);
+    bI(p2.K);bI(p2.F);bI(p2.S);bI(p2.P);bI(p2.F_pool);bI(p2.S_pool);
+    bI(p2.N_lrn);bF(p2.alpha);bF(p2.beta);bF(p2.k_lrn);
+
+    if(rank!=0){
+        p1.weights.resize((size_t)p1.K*C*p1.F*p1.F);
+        p1.biases .resize(p1.K);
+        p2.weights.resize((size_t)p2.K*p1.K*p2.F*p2.F);
+        p2.biases .resize(p2.K);
+    }
+    MPI_Bcast(p1.weights.data(),(int)p1.weights.size(),MPI_FLOAT,0,MPI_COMM_WORLD);
+    MPI_Bcast(p1.biases .data(),(int)p1.biases .size(),MPI_FLOAT,0,MPI_COMM_WORLD);
+    MPI_Bcast(p2.weights.data(),(int)p2.weights.size(),MPI_FLOAT,0,MPI_COMM_WORLD);
+    MPI_Bcast(p2.biases .data(),(int)p2.biases .size(),MPI_FLOAT,0,MPI_COMM_WORLD);
+
+    /* ------------ scatter rows --------------------------------- */
+    std::vector<int> rows(size),cnt(size),disp(size);
+    if(rank==0){
+        int base=H/size,rem=H%size,off=0;
+        for(int r=0;r<size;++r){
+            rows[r]=base+(r<rem);
+            cnt [r]=rows[r]*W*C; disp[r]=off; off+=cnt[r];
+        }
+    }
+    int myRows;
+    MPI_Scatter(rows.data(),1,MPI_INT,&myRows,1,MPI_INT,0,MPI_COMM_WORLD);
+
+    std::vector<float> myIn(myRows*W*C);
+    MPI_Scatterv(full.data(),cnt.data(),disp.data(),MPI_FLOAT,
+                 myIn.data(),(int)myIn.size(),MPI_FLOAT,0,MPI_COMM_WORLD);
+
+    /* ------------ choose GPU ----------------------------------- */
+    int nDev=0; cudaGetDeviceCount(&nDev);
+    CUDA_CHECK(cudaSetDevice(rank % std::max(1,nDev)));
+
+    /* ------------ top/bottom halo exchange (Conv1) ------------- */
+    int halo=p1.F/2;                      // rows
+    int rowSz=W*C;                        // elements
+    if(halo){
+        std::vector<float> recvT(halo*rowSz),recvB(halo*rowSz);
+        MPI_Request reqs[4]; int q=0;
+        if(rank>0)        MPI_Irecv(recvT.data(),halo*rowSz,MPI_FLOAT,rank-1,0,MPI_COMM_WORLD,&reqs[q++]);
+        if(rank<size-1)   MPI_Irecv(recvB.data(),halo*rowSz,MPI_FLOAT,rank+1,1,MPI_COMM_WORLD,&reqs[q++]);
+        if(rank>0)        MPI_Isend(myIn.data(),halo*rowSz,MPI_FLOAT,rank-1,1,MPI_COMM_WORLD,&reqs[q++]);
+        if(rank<size-1)   MPI_Isend(myIn.data()+(myIn.size()-halo*rowSz),halo*rowSz,MPI_FLOAT,
+                                    rank+1,0,MPI_COMM_WORLD,&reqs[q++]);
+        MPI_Waitall(q,reqs,MPI_STATUSES_IGNORE);
+        if(rank>0)        myIn.insert(myIn.begin(),recvT.begin(),recvT.end());
+        if(rank<size-1)   myIn.insert(myIn.end()  ,recvB.begin(),recvB.end());
+    }
+
+    /* ------------ copy padded slice to GPU --------------------- */
+    float *d_in=nullptr; CUDA_CHECK(cudaMalloc(&d_in,myIn.size()*sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(d_in,myIn.data(),myIn.size()*sizeof(float),cudaMemcpyHostToDevice));
+
+    /* ------------ temporary output buffer ---------------------- */
+    // — Conv1 output dims —
+    int Hc1 = convOutDim((int)myIn.size()/rowSz, p1.F, p1.P, p1.S);
+    int Wc1 = convOutDim(W,                     p1.F, p1.P, p1.S);
+    // — Pool1 output dims —
+    int Hp1 = poolOutDim(Hc1, p1.F_pool, p1.S_pool);
+    int Wp1 = poolOutDim(Wc1, p1.F_pool, p1.S_pool);
+    // — Conv2 output dims —
+    int Hc2 = convOutDim(Hp1, p2.F, p2.P, p2.S);
+    int Wc2 = convOutDim(Wp1, p2.F, p2.P, p2.S);
+    // — Pool2 output dims —
+    int Hp2 = poolOutDim(Hc2, p2.F_pool, p2.S_pool);
+    int Wp2 = poolOutDim(Wc2, p2.F_pool, p2.S_pool);
+
+    std::vector<float> tileOut((size_t)Hp2 * Wp2 * p2.K);
+
+    float* d_out; CUDA_CHECK(cudaMalloc(&d_out,tileOut.size()*sizeof(float)));
+
+    /* ------------ single-GPU forward on the tile --------------- */
+    alexnetTileForwardCUDA(d_in,p1,p2,(int)myIn.size()/rowSz,W,C,d_out);
+    CUDA_CHECK(cudaMemcpy(tileOut.data(),d_out,
+                          tileOut.size()*sizeof(float),cudaMemcpyDeviceToHost));
+
+    /* ------------ trim halo-only rows -------------------------- */
+    int trim1=poolOutDim(halo,p1.F_pool,p1.S_pool);
+    int trim2=poolOutDim(halo,p2.F_pool,p2.S_pool);
+    int trim = trim1 + trim2;
+    int start=(rank?trim:0), stop=Hp2-(rank<size-1?trim:0);
+    std::vector<float> local(tileOut.begin()+start*Wp2*p2.K,
+                             tileOut.begin()+stop *Wp2*p2.K);
+
+    /* ------------ gather back ---------------------------------- */
+    int sendN=(int)local.size();
+    std::vector<int> recN(size),dispG(size);
+    MPI_Gather(&sendN,1,MPI_INT,recN.data(),1,MPI_INT,0,MPI_COMM_WORLD);
+    if(rank==0){dispG[0]=0;for(int i=1;i<size;++i)dispG[i]=dispG[i-1]+recN[i-1];
+                full.resize(dispG.back()+recN.back());}
+    MPI_Gatherv(local.data(),sendN,MPI_FLOAT,
+                full.data(),recN.data(),dispG.data(),MPI_FLOAT,0,MPI_COMM_WORLD);
+
+    if(rank==0){
+        std::cout<<"shape "<<full.size()/(Wp2*p2.K)<<"x"<<Wp2<<"x"<<p2.K<<"\n"
+                 <<"sample "<<full[0]<<" "<<full[1]<<" "<<full[2]<<" "
+                 <<full[3]<<" "<<full[4]<<"\n";
+    }
+    cudaFree(d_in); cudaFree(d_out);
 }
-#define HOST_CUDA_CHECK(call) { hostCheckCUDA((call), __FILE__, __LINE__); }
+/*----------------------------------------------------------------*/
+int main(int argc,char** argv)
+{
+    MPI_Init(&argc,&argv);
+    LayerParams b1,b2;
+    b1.K=96 ; b1.F=11; b1.S=4; b1.P=0; b1.F_pool=3; b1.S_pool=2;
+    b2.K=256; b2.F=5 ; b2.S=1; b2.P=2; b2.F_pool=3; b2.S_pool=2;
+    b2.N_lrn=5; b2.alpha=1e-4f; b2.beta=0.75f; b2.k_lrn=2.f;
 
-int main(int argc, char** argv) {
-    MPI_Init(&argc, &argv);
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    // --- 1. Root node initialization ---
-    int H = 227, W = 227, C = 3; // Standard AlexNet input - H is now crucial and broadcast
-    LayerParams p1, p2;
-    std::vector<float> h_inputData; // Full input data on host (rank 0 only)
-    std::vector<float> h_finalOutput; // Gathered final output on host (rank 0 only)
-    int finalH = -1, finalW = -1, finalC = -1; // Expected final dimensions
-
-    if (rank == 0) {
-        std::cout << "--- AlexNet MPI+CUDA (V4 - Host Staging) ---" << std::endl;
-        std::cout << "Initializing data and parameters on Rank 0..." << std::endl;
-
-        h_inputData.assign((size_t)H * W * C, 1.0f);
-        p1.K = 96; p1.F = 11; p1.S = 4; p1.P = 0;
-        p1.F_pool = 3; p1.S_pool = 2;
-        if (p1.F % 2 == 0 || p1.F_pool % 2 == 0) { std::cerr << "Warning: Filter sizes should be odd for simpler F/2 halo calculation." << std::endl; }
-        p1.weights.assign((size_t)p1.K * C * p1.F * p1.F, 0.01f);
-        p1.biases.assign(p1.K, 0.0f);
-        p2.K = 256; p2.F = 5; p2.S = 1; p2.P = 2;
-        p2.F_pool = 3; p2.S_pool = 2;
-        if (p2.F % 2 == 0 || p2.F_pool % 2 == 0) { std::cerr << "Warning: Filter sizes should be odd for simpler F/2 halo calculation." << std::endl; }
-        p2.N_lrn = 5; p2.alpha = 1e-4f; p2.beta = 0.75f; p2.k_lrn = 2.0f;
-        int C_conv2_input = p1.K;
-        p2.weights.assign((size_t)p2.K * C_conv2_input * p2.F * p2.F, 0.01f);
-        p2.biases.assign(p2.K, 0.0f);
-
-        int Hc1 = convOutDim(H, p1.F, p1.P, p1.S); int Wc1 = convOutDim(W, p1.F, p1.P, p1.S);
-        int Hp1 = poolOutDim(Hc1, p1.F_pool, p1.S_pool); int Wp1 = poolOutDim(Wc1, p1.F_pool, p1.S_pool);
-        int Hc2 = convOutDim(Hp1, p2.F, p2.P, p2.S); int Wc2 = convOutDim(Wp1, p2.F, p2.P, p2.S);
-        int Hp2 = poolOutDim(Hc2, p2.F_pool, p2.S_pool); int Wp2 = poolOutDim(Wc2, p2.F_pool, p2.S_pool);
-        finalH = Hp2; finalW = Wp2; finalC = p2.K;
-
-        if (finalH <= 0 || finalW <= 0 || finalC <=0) { std::cerr << "Error: Calculated final dimensions invalid (" << finalH << "x" << finalW << "x" << finalC << ")." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-        std::cout << "Expected final output dimensions: H=" << finalH << ", W=" << finalW << ", C=" << finalC << std::endl;
-        std::cout << "Initialization complete." << std::endl;
+    const int H=227,W=227,C=3;
+    MPI_Barrier(MPI_COMM_WORLD);
+    auto t0=std::chrono::high_resolution_clock::now();
+    runHybridMPI(H,W,C,b1,b2);
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(int rank;!MPI_Comm_rank(MPI_COMM_WORLD,&rank)&&rank==0){
+        auto t1=std::chrono::high_resolution_clock::now();
+        std::cout<<"total runtime "
+                 <<std::chrono::duration<double,std::milli>(t1-t0).count()
+                 <<" ms\n";
     }
-
-    // --- 2. Broadcast essential parameters ---
-    MPI_Bcast(&H, 1, MPI_INT, 0, MPI_COMM_WORLD); // *** H is now broadcast ***
-    MPI_Bcast(&W, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&C, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&p1.K, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p1.F, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&p1.S, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p1.P, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&p1.F_pool, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p1.S_pool, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&p2.K, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p2.F, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&p2.S, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p2.P, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&p2.F_pool, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&p2.S_pool, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&p2.N_lrn, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&finalH, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&finalW, 1, MPI_INT, 0, MPI_COMM_WORLD); MPI_Bcast(&finalC, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    float lrn_params[3];
-    if (rank == 0) { lrn_params[0] = p2.alpha; lrn_params[1] = p2.beta; lrn_params[2] = p2.k_lrn; }
-    MPI_Bcast(lrn_params, 3, MPI_FLOAT, 0, MPI_COMM_WORLD);
-    if (rank != 0) { p2.alpha = lrn_params[0]; p2.beta = lrn_params[1]; p2.k_lrn = lrn_params[2]; }
-
-    size_t w1_size = (size_t)p1.K * C * p1.F * p1.F; size_t b1_size = (size_t)p1.K;
-    size_t w2_size = (size_t)p2.K * p1.K * p2.F * p2.F; size_t b2_size = (size_t)p2.K;
-    if (rank != 0) { p1.weights.resize(w1_size); p1.biases.resize(b1_size); p2.weights.resize(w2_size); p2.biases.resize(b2_size); }
-    if (w1_size > INT_MAX || b1_size > INT_MAX || w2_size > INT_MAX || b2_size > INT_MAX) { if (rank == 0) std::cerr << "Error: Parameter size exceeds INT_MAX." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-    MPI_Bcast(p1.weights.data(), static_cast<int>(w1_size), MPI_FLOAT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(p1.biases.data(), static_cast<int>(b1_size), MPI_FLOAT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(p2.weights.data(), static_cast<int>(w2_size), MPI_FLOAT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(p2.biases.data(), static_cast<int>(b2_size), MPI_FLOAT, 0, MPI_COMM_WORLD);
-
-    // --- 3. Scatter Input Data ---
-    std::vector<int> sendCounts(size); std::vector<int> displacements(size);
-    std::vector<float> h_localInput; int localH = 0; int rowSize = W * C;
-    if (rowSize <= 0 && H > 0 && W > 0 && C > 0) { if (rank == 0) std::cerr << "Error: Calculated rowSize invalid." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-    if (rank == 0) {
-        int baseRows = H / size; int extraRows = H % size; int currentDisplacement = 0;
-        for (int i = 0; i < size; ++i) {
-            int rowsForRank = baseRows + (i < extraRows ? 1 : 0); sendCounts[i] = rowsForRank * rowSize;
-            if (rowsForRank > 0 && rowSize > 0 && sendCounts[i] / rowsForRank != rowSize ) { std::cerr << "Error: Scatter count overflow rank " << i << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-            displacements[i] = currentDisplacement;
-            if (sendCounts[i] < 0 || currentDisplacement < 0 || currentDisplacement > INT_MAX - sendCounts[i]) { std::cerr << "Error: Scatter displacement overflow rank " << i << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-            currentDisplacement += sendCounts[i];
-        }
-        if (currentDisplacement != H * W * C && H > 0) { std::cerr << "Error: Total scatter size mismatch." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-    }
-    int rowsForMyRank; std::vector<int> rowsPerRank(size);
-    if (rank == 0) { int baseRows = H / size; int extraRows = H % size; for(int i=0; i<size; ++i) rowsPerRank[i] = baseRows + (i < extraRows ? 1 : 0); }
-    MPI_Scatter(rowsPerRank.data(), 1, MPI_INT, &rowsForMyRank, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    localH = rowsForMyRank;
-    int localInputSize = localH * rowSize; if (localInputSize < 0) localInputSize = 0;
-    if (localInputSize > 0) h_localInput.resize(localInputSize); else h_localInput.clear();
-    MPI_Scatterv( (rank == 0 && !h_inputData.empty()) ? h_inputData.data() : nullptr, sendCounts.data(), displacements.data(), MPI_FLOAT, h_localInput.empty() ? nullptr : h_localInput.data(), localInputSize, MPI_FLOAT, 0, MPI_COMM_WORLD);
-
-    // --- 4. Select GPU and Run Forward Pass ---
-    int deviceId = 0; int numDevices = 0; cudaError_t cuda_err = cudaGetDeviceCount(&numDevices);
-    if (cuda_err != cudaSuccess) { if (rank == 0) fprintf(stderr, "CUDA error cudaGetDeviceCount: %s\n", cudaGetErrorString(cuda_err)); MPI_Abort(MPI_COMM_WORLD, 1); }
-    if (numDevices > 0) { deviceId = rank % numDevices; HOST_CUDA_CHECK(cudaSetDevice(deviceId)); /* Print info if needed */ }
-    else { if (rank == 0) std::cerr << "Error: No CUDA devices found." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-    std::vector<float> h_localOutput;
-    MPI_Barrier(MPI_COMM_WORLD); auto t_start = std::chrono::high_resolution_clock::now();
-
-    // *** UPDATE THE CALL: Pass H ***
-    alexnetForwardPassMPI_CUDA(h_localInput, localH, H, W, C, p1, p2, h_localOutput, rank, size);
-
-    MPI_Barrier(MPI_COMM_WORLD); auto t_end = std::chrono::high_resolution_clock::now();
-
-    // --- 5. Gather Final Results ---
-    int localOutputSize = static_cast<int>(h_localOutput.size()); if (localOutputSize < 0) localOutputSize = 0;
-    std::vector<int> recvCounts(size, 0); std::vector<int> recvDisplacements(size, 0);
-    MPI_Gather(&localOutputSize, 1, MPI_INT, recvCounts.empty() ? nullptr : recvCounts.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-    long long totalFinalSize_ll = 0;
-    if (rank == 0) {
-        if (recvCounts.empty()) { std::cerr << "Error: recvCounts empty rank 0." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-        recvDisplacements.resize(size); recvDisplacements[0] = 0;
-        if (recvCounts[0] < 0) { std::cerr << "Error: Rank 0 neg recv count." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-        totalFinalSize_ll = recvCounts[0];
-        for (int i = 1; i < size; ++i) {
-            if (recvCounts[i-1] < 0) { std::cerr << "Error: Rank " << i-1 << " neg recv count." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-            long long prevDisp_ll = recvDisplacements[i-1];
-            if (prevDisp_ll > INT_MAX - recvCounts[i-1]) { std::cerr << "Error: Gather displ overflow rank " << i << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-            recvDisplacements[i] = prevDisp_ll + recvCounts[i-1];
-            if (recvCounts[i] < 0) { std::cerr << "Error: Rank " << i << " neg recv count." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-            totalFinalSize_ll += recvCounts[i];
-        }
-        if (totalFinalSize_ll > h_finalOutput.max_size()) { std::cerr << "Error: Total gather size exceeds vector max_size." << std::endl; MPI_Abort(MPI_COMM_WORLD, 1); }
-        if (totalFinalSize_ll < 0) totalFinalSize_ll = 0;
-        h_finalOutput.resize(static_cast<size_t>(totalFinalSize_ll));
-    }
-    MPI_Gatherv( h_localOutput.empty() ? nullptr : h_localOutput.data(), localOutputSize, MPI_FLOAT, (rank == 0 && !h_finalOutput.empty()) ? h_finalOutput.data() : nullptr, recvCounts.empty() ? nullptr : recvCounts.data(), recvDisplacements.empty() ? nullptr : recvDisplacements.data(), MPI_FLOAT, 0, MPI_COMM_WORLD);
-
-    // --- 6. Final Output and Timing (Rank 0) ---
-    if (rank == 0) {
-        double duration_ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
-        std::cout << "AlexNet MPI+CUDA Forward Pass completed in " << duration_ms << " ms" << std::endl;
-        int expectedTotalSize = finalH * finalW * finalC; size_t gatheredSize = h_finalOutput.size();
-        if (finalH > 0) { std::cout << "Final Output Shape: " << finalH << "x" << finalW << "x" << finalC << std::endl; }
-        else { std::cout << "Final Output Shape: Calculation resulted in non-positive expected dimensions." << std::endl; }
-        if (finalH > 0 && gatheredSize != static_cast<size_t>(expectedTotalSize)) { std::cerr << "WARNING: Gathered size (" << gatheredSize << ") != expected (" << expectedTotalSize << "). Check logic." << std::endl; }
-        else if (finalH <= 0) { std::cout << "Gathered total size: " << gatheredSize << " elements." << std::endl; }
-        std::cout << "Final Output (first 10 values):";
-        size_t num_to_print = std::min((size_t)10, h_finalOutput.size());
-        for (size_t i = 0; i < num_to_print; ++i) { std::cout << " " << h_finalOutput[i]; }
-        if (h_finalOutput.size() > 10) std::cout << " ...";
-        std::cout << std::endl;
-    }
-
     MPI_Finalize();
     return 0;
 }

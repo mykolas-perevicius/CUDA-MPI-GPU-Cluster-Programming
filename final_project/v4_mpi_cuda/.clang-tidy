@@ -1,0 +1,12 @@
+---
+# Defines which checks clang-tidy should run and how.
+# Build flags (includes, standards, defines) are read from compile_commands.json
+Checks: '-*,clang-analyzer-*,bugprone-*,-bugprone-narrowing-conversions,-bugprone-implicit-widening-of-multiplication-result,-bugprone-easily-swappable-parameters,-modernize-use-trailing-return-type,-modernize-avoid-c-arrays'
+HeaderFilterRegex: '^(src|include)/' # Only show warnings from our own headers/sources
+SystemHeaders: false
+WarningsAsErrors: '' # Don't treat warnings as errors
+FormatStyle: none
+InheritParentConfig: false
+# AnalyzeTemporaryDtors: false # <<< REMOVED THIS LINE
+UseColor: true
+Quiet: true # Suppresses non-diagnostic output from clang-tidy itself
