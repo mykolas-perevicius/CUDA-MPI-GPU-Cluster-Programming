@@ -72,8 +72,9 @@ if [ ! -f "$TARGET_EXEC" ]; then
 fi
 
 # 2. Run Tests
-declare -a failed_runs
-declare -a warning_runs
+# Initialize arrays explicitly
+declare -a failed_runs=()
+declare -a warning_runs=()
 declare -A run_times # Associative array to store times
 
 log_info "Starting runtime tests for np=${NP_VALUES[*]}..."
@@ -90,17 +91,21 @@ for np in "${NP_VALUES[@]}"; do
 
     # Execute and capture exit code
     run_exit_code=0
+    # Use exec to avoid subshell issues with pipes if needed, but direct call is usually fine
     "$MPI_RUN_CMD" $MPI_ARGS -np "$np" ./"${TARGET_EXEC}" >> "$LOG_FILE" 2>&1 || run_exit_code=$?
 
     if [[ $run_exit_code -eq 0 ]]; then
-        log_pass "np=$np completed successfully."
-        # Try parsing time (optional, for summary)
+        # Parse time (now uses the correct output format)
         time_v4=$(grep -m1 '^AlexNet MPI+CUDA Forward Pass completed in' "$LOG_FILE" | grep -Eo '[0-9]+(\.[0-9]+)? ms' | head -1 || echo "N/A")
         run_times[$np]=$time_v4
-        # Check for internal warnings printed by the C++ code
+
+        # Check for internal warnings printed by the C++ code (grep stderr specifically)
+        # Note: MPI might merge stderr, so grep the whole log is often necessary anyway
         if grep -q -i "WARNING:" "$LOG_FILE"; then
              log_warn "np=$np finished, but C++ code printed WARNINGS (check $LOG_FILE)."
              warning_runs+=("np=$np (Internal Warning)")
+        else
+             log_pass "np=$np completed successfully." # Only log pass if no warnings
         fi
     else
         log_fail "np=$np failed with exit code $run_exit_code."
@@ -110,12 +115,10 @@ for np in "${NP_VALUES[@]}"; do
         # Provide detailed error context
         echo "--- Potential errors from log (${LOG_FILE}): ---"
         # Look for common error patterns
-        grep -iE 'error|fail|abort|fault|warning|signal' "$LOG_FILE" | head -n 15 || echo "[No specific error keywords found by grep]"
-        echo "--- Last 10 lines of log (${LOG_FILE}): ---"
-        tail -n 10 "$LOG_FILE"
+        grep -iE 'error|fail|abort|fault|signal|invalid' "$LOG_FILE" | head -n 20 || echo "[No specific error keywords found by grep]"
+        echo "--- Last 15 lines of log (${LOG_FILE}): ---"
+        tail -n 15 "$LOG_FILE"
         echo "--------------------------------------------------"
-        # Optionally add specific checks for CUDA/MPI errors if needed
-        # if grep -q "CUDA error" "$LOG_FILE"; then ... fi
     fi
 done
 
@@ -132,6 +135,7 @@ for np in "${NP_VALUES[@]}"; do
     found_fail=0
     found_warn=0
 
+    # Check failures first
     for failed in "${failed_runs[@]}"; do
         if [[ "$failed" == "np=$np"* ]]; then
             status_msg="${COL_RED}[ FAILED ]${COL_RESET}"
@@ -141,6 +145,7 @@ for np in "${NP_VALUES[@]}"; do
         fi
     done
 
+    # If not failed, check warnings
     if [[ $found_fail -eq 0 ]]; then
          for warned in "${warning_runs[@]}"; do
               if [[ "$warned" == "np=$np"* ]]; then
@@ -152,6 +157,7 @@ for np in "${NP_VALUES[@]}"; do
          done
     fi
 
+    # If not failed and not warned, it passed
      if [[ $found_fail -eq 0 && $found_warn -eq 0 ]]; then
         status_msg="${COL_GREEN}[ PASSED ]${COL_RESET}"
         final_col=$COL_GREEN
@@ -165,5 +171,10 @@ echo "============================================="
 if [ ${#failed_runs[@]} -gt 0 ]; then
     exit 1
 fi
+
+# Exit with code 2 if only warnings occurred (optional)
+# if [ ${#warning_runs[@]} -gt 0 ]; then
+#     exit 2
+# fi
 
 exit 0
