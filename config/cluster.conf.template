@@ -1,9 +1,0 @@
-# Cluster Configuration Template
-# Copy to config/cluster.conf and fill in your details
-
-MANAGER_HOST=node0
-MANAGER_IP=192.168.1.100 # Example IP
-WORKER_HOSTS=("node1")
-WORKER_IPS=("192.168.1.101") # Example IP
-CLUSTER_USER=myko # Default to current user
-REMOTE_CODE_DIR=/tmp # Example path for syncing code if needed
