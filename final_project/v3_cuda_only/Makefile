@@ -1,33 +1,46 @@
-# final_project/v3_cuda_only/Makefile
+# ───────────────────────────────────────────────────────────────
+# AlexNet V3 – CUDA‑only build
+# Tested with CUDA 11‑14 (nvcc >= 11.0)
+# ───────────────────────────────────────────────────────────────
 
-# CUDA / GPU‐only version of AlexNet forward pass
+CUDA_ARCH     := -gencode arch=compute_50,code=sm_50   # works on Maxwell+
+NVCCFLAGS     := -std=c++11 -O3 \
+                 -Xcompiler="-Wall -Wextra" \
+                 -cudart=shared \
+                 --cudadevrt=none        # <‑‑ prevents “cannot find -lcudadevrt”
 
-NVCC      := nvcc
-TARGET    := template
-INCLUDES  := -I./include
+INCLUDES      := -I./include
+LDFLAGS       := -lm                      # cudart is linked automatically via -cudart=shared
 
-# Add both a PTX entry (compute_75) and a SASS entry (sm_75)
-# so that if your GPU is e.g. Ampere (sm_80/86) it'll JIT from PTX.
-NVCCFLAGS := -std=c++11 -O3 \
-             -Xcompiler="-Wall -Wextra" \
-             -gencode arch=compute_75,code=compute_75 \
-             -gencode arch=compute_75,code=sm_75
+SRC_DIR       := src
+OBJ_DIR       := $(SRC_DIR)
+SRCS          := $(SRC_DIR)/alexnet_cuda.cu \
+                 $(SRC_DIR)/layers_cuda.cu \
+                 $(SRC_DIR)/main_cuda.cpp
+OBJS          := $(SRCS:.cu=.o)
+OBJS          := $(OBJS:.cpp=.o)
 
-SRCS_CU   := src/alexnet_cuda.cu src/layers_cuda.cu
-SRCS_CPP  := src/main_cuda.cpp
-OBJS      := $(SRCS_CU:.cu=.o) $(SRCS_CPP:.cpp=.o)
-LDFLAGS   := -lcudart -lm
+TARGET        := template
 
+# default rule
 all: $(TARGET)
 
-%.o: %.cu
-	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
-
-%.o: %.cpp
-	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
-
 $(TARGET): $(OBJS)
-	$(NVCC) $(NVCCFLAGS) -o $@ $(OBJS) $(LDFLAGS)
+	@echo '--- Linking V3 Target ---'
+	@echo 'NVCC Command: nvcc $(NVCCFLAGS) $(CUDA_ARCH) -o $@ $^ $(LDFLAGS)'
+	@nvcc $(NVCCFLAGS) $(CUDA_ARCH) -o $@ $^ $(LDFLAGS)
 
+# pattern rules
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cu
+	@echo 'Compiling (CUDA): $<'
+	@nvcc $(NVCCFLAGS) $(CUDA_ARCH) $(INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@echo 'Compiling (C++): $<'
+	@nvcc $(NVCCFLAGS) $(CUDA_ARCH) $(INCLUDES) -c $< -o $@
+
+# housekeeping
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJ_DIR)/*.o $(TARGET)
+
+.PHONY: all clean
