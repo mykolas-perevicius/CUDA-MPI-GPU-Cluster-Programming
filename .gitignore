@@ -15,6 +15,7 @@ build-*/ # CMake common pattern
 *.zip
 *.tar.gz
 *.tar.bz2
+*.iso
 
 # Configuration files (Only ignore specific instances if needed)
 # config/cluster.conf # If this IS sensitive/local, keep it ignored.
