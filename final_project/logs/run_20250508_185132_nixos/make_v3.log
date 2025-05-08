@@ -1,0 +1,5 @@
+Compiling (CUDA): src/alexnet_cuda.cu
+Compiling (CUDA): src/layers_cuda.cu
+Compiling (C++): src/main_cuda.cpp
+--- Linking V3 Target ---
+NVCC Command: nvcc -std=c++11 -O3 -Xcompiler="-Wall -Wextra" -cudart=shared --cudadevrt=none         -gencode arch=compute_50,code=sm_50    -o template src/alexnet_cuda.o src/layers_cuda.o src/main_cuda.o -lm                      
