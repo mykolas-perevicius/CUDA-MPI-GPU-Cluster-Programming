@@ -3,11 +3,11 @@
 # Tested with CUDA 11‑14 (nvcc >= 11.0)
 # ───────────────────────────────────────────────────────────────
 
-CUDA_ARCH     := -gencode arch=compute_50,code=sm_50   # works on Maxwell+
+CUDA_ARCH     := -gencode arch=compute_50,code=sm_50   
 NVCCFLAGS     := -std=c++11 -O3 \
                  -Xcompiler="-Wall -Wextra" \
                  -cudart=shared \
-                 --cudadevrt=none        # <‑‑ prevents “cannot find -lcudadevrt”
+                 --cudadevrt=none        
 
 INCLUDES      := -I./include
 LDFLAGS       := -lm                      # cudart is linked automatically via -cudart=shared
