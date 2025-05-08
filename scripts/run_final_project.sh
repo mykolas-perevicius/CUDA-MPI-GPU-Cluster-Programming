@@ -4,7 +4,7 @@ set -euo pipefail
 # root of repo
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FP="$ROOT/final_project"
-LOGS="$FP/logs"
+LOGS="$FP/old_logs"
 mkdir -p "$LOGS"
 
 # helper to run & log; prints ✅/❌/⚠
