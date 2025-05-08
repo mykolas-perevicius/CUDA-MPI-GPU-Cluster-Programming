@@ -44,7 +44,7 @@ $(TARGET): $(OBJS)
 $(OBJS_CU): %.o: %.cu $(wildcard include/*.hpp) Makefile
 	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -dc $< -o $@
 
-$(OBJS_CPP): %.o: %.cpp $(wildcard include/*.hpp) Makefile
+$(OBJS_CPP): %.o: %.cpp $(wildcard include/*.hpp) Makefile		
 	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -c  $< -o $@
 
 clean:
