@@ -1,0 +1,76 @@
+Multi-Machine Full Suite Test Orchestration Log - Session: fullsuite_20250509_124616_nixos
+[2025-05-09 12:46:16] Starting Full Suite Test Script...
+[2025-05-09 12:46:16] Session ID: fullsuite_20250509_124616_nixos
+[2025-05-09 12:46:16] Logging to Directory: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250509_124616_nixos
+[2025-05-09 12:46:16] Project Root: /home/myko/CUDA-MPI-GPU-Cluster-Programming
+[2025-05-09 12:46:16] Final Project Dir: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project
+[2025-05-09 12:46:16] Target hosts configured:
+[2025-05-09 12:46:16]   - myko@192.168.1.158 50
+[2025-05-09 12:46:16]   - myko@192.168.1.97 50
+[2025-05-09 12:46:16] --- Running Initial Cluster Setup ---
+[2025-05-09 12:46:17] --- Phase 1: Checking/Setting up Passwordless SSH ---
+[2025-05-09 12:46:17] Checking SSH to myko@192.168.1.158 from myko@192.168.1.158...
+[2025-05-09 12:46:17] SUCCESS: Passwordless SSH to myko@192.168.1.158.
+[2025-05-09 12:46:17] Checking SSH to myko@192.168.1.97 from myko@192.168.1.158...
+[2025-05-09 12:46:17] SUCCESS: Passwordless SSH to myko@192.168.1.97.
+[2025-05-09 12:46:17] --- SSH Setup Phase Completed ---
+[2025-05-09 12:46:17] Combined CUDA arch flags for V3/V4 builds: -gencode arch=compute_50,code=sm_50 -gencode arch=compute_50,code=compute_50 
+[2025-05-09 12:46:17] --- Phase 3: Syncing Project Files to Worker Nodes ---
+[2025-05-09 12:46:17] Syncing project root /home/myko/CUDA-MPI-GPU-Cluster-Programming/ to myko@192.168.1.97:/home/myko/CUDA-MPI-GPU-Cluster-Programming/
+[2025-05-09 12:46:18]   Executing rsync (Log: fullsuite_20250509_124616_nixos/rsync_to_192.168.1.97.log)...
+[2025-05-09 12:46:18] SUCCESS: Sync to myko@192.168.1.97.
+[2025-05-09 12:46:18] --- File Synchronization Phase Completed ---
+[2025-05-09 12:46:18] --- Phase 4: Creating MPI Hostfile ---
+[2025-05-09 12:46:18] MPI Hostfile: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250509_124616_nixos/mpi_cluster_hosts.txt
+192.168.1.158 slots=1
+192.168.1.97 slots=1
+[2025-05-09 12:46:18] --- MPI Hostfile Creation Phase Completed ---
+[2025-05-09 12:46:18] --- Initial Cluster Setup Completed ---
+[2025-05-09 12:46:18] --- Starting Full Test Suite ---
+[2025-05-09 12:46:18] === Testing V1 Serial (1 process) ===
+[2025-05-09 12:46:18]   Building V1 (Log: fullsuite_20250509_124616_nixos/make_v1.log)...
+[2025-05-09 12:46:20]     Build Status: Build OK
+[2025-05-09 12:46:20]   -> Executing: cd /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v1_serial && ./template (Log: fullsuite_20250509_124616_nixos/run_v1_np1.log)
+[2025-05-09 12:46:21]     [✔ Command Succeeded]
+[2025-05-09 12:46:21] === Testing V2 2.1-broadcast-all with 1 processes ===
+[2025-05-09 12:46:21]   Building V2 2.1-broadcast-all (Log: fullsuite_20250509_124616_nixos/make_v2_2.1_broadcast_all_np1.log)...
+[2025-05-09 12:46:22]     Build Status: Build OK
+[2025-05-09 12:46:22]   -> Executing: cd /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v2_mpi_only/2.1_broadcast_all && mpirun -np 1 ./template (Log: fullsuite_20250509_124616_nixos/run_v2_2.1_broadcast_all_np1.log)
+[2025-05-09 12:46:24]     [✔ Command Succeeded]
+[2025-05-09 12:46:24] === Testing V2 2.1-broadcast-all with 2 processes ===
+[2025-05-09 12:46:24]   Building V2 2.1-broadcast-all (Log: fullsuite_20250509_124616_nixos/make_v2_2.1_broadcast_all_np2.log)...
+[2025-05-09 12:46:26]     Build Status: Build OK
+[2025-05-09 12:46:26]   -> Executing: mpirun -np 2 --hostfile /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250509_124616_nixos/mpi_cluster_hosts.txt --report-bindings --mca btl_tcp_if_exclude lo,docker0,virbr0 --mca oob_tcp_if_exclude lo,docker0,virbr0 /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v2_mpi_only/2.1_broadcast_all/template (Log: fullsuite_20250509_124616_nixos/run_v2_2.1_broadcast_all_np2.log)
+[2025-05-09 12:46:29]     [✔ Command Succeeded]
+[2025-05-09 12:46:29] === Testing V2 2.2-scatter-halo with 1 processes ===
+[2025-05-09 12:46:29]   Building V2 2.2-scatter-halo (Log: fullsuite_20250509_124616_nixos/make_v2_2.2_scatter_halo_np1.log)...
+[2025-05-09 12:46:31]     Build Status: Build OK
+[2025-05-09 12:46:31]   -> Executing: cd /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v2_mpi_only/2.2_scatter_halo && mpirun -np 1 ./template (Log: fullsuite_20250509_124616_nixos/run_v2_2.2_scatter_halo_np1.log)
+[2025-05-09 12:46:33]     [✔ Command Succeeded]
+[2025-05-09 12:46:33] === Testing V2 2.2-scatter-halo with 2 processes ===
+[2025-05-09 12:46:33]   Building V2 2.2-scatter-halo (Log: fullsuite_20250509_124616_nixos/make_v2_2.2_scatter_halo_np2.log)...
+[2025-05-09 12:46:35]     Build Status: Build OK
+[2025-05-09 12:46:35]   -> Executing: mpirun -np 2 --hostfile /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250509_124616_nixos/mpi_cluster_hosts.txt --report-bindings --mca btl_tcp_if_exclude lo,docker0,virbr0 --mca oob_tcp_if_exclude lo,docker0,virbr0 /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v2_mpi_only/2.2_scatter_halo/template (Log: fullsuite_20250509_124616_nixos/run_v2_2.2_scatter_halo_np2.log)
+[2025-05-09 12:46:39]     [✔ Command Succeeded]
+[2025-05-09 12:46:39] === Testing V3 CUDA Only (1 process, on master) ===
+[2025-05-09 12:46:39]   Building V3 (Log: fullsuite_20250509_124616_nixos/make_v3.log)... Arch: -gencode arch=compute_50,code=sm_50 -gencode arch=compute_50,code=compute_50 
+[2025-05-09 12:46:42]     Build Status: Build OK
+[2025-05-09 12:46:42]   -> Executing: cd /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v3_cuda_only && ./template (Log: fullsuite_20250509_124616_nixos/run_v3_np1.log)
+[2025-05-09 12:46:43]     [✔ Command Succeeded]
+[2025-05-09 12:46:43] === Testing V4 MPI+CUDA ===
+[2025-05-09 12:46:43]   Building V4 (Log: fullsuite_20250509_124616_nixos/make_v4.log)... Arch: -gencode arch=compute_50,code=sm_50 -gencode arch=compute_50,code=compute_50 
+[2025-05-09 12:46:50]     Build Status: Build OK
+[2025-05-09 12:46:50] --- V4 with 1 processes ---
+[2025-05-09 12:46:50]   -> Executing: cd /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v4_mpi_cuda && mpirun -np 1 ./template (Log: fullsuite_20250509_124616_nixos/run_v4_np1.log)
+[2025-05-09 12:46:51]     [✔ Command Succeeded]
+[2025-05-09 12:46:51] --- V4 with 2 processes ---
+[2025-05-09 12:46:51]   -> Executing: mpirun -np 2 --hostfile /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250509_124616_nixos/mpi_cluster_hosts.txt --report-bindings --mca btl_tcp_if_exclude lo,docker0,virbr0 --mca oob_tcp_if_exclude lo,docker0,virbr0 /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v4_mpi_cuda/template (Log: fullsuite_20250509_124616_nixos/run_v4_np2.log)
+[2025-05-09 12:46:54]     [✔ Command Succeeded]
+[2025-05-09 12:46:54] --- Full Test Suite Finished ---
+[2025-05-09 12:46:54] === Summary Table (Master: nixos, Session: fullsuite_20250509_124616_nixos) ===
+[2025-05-09 12:46:54] Detailed logs in: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250509_124616_nixos
+[2025-05-09 12:46:54] CSV summary: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/summary_fullsuite_20250509_124616.csv
+[2025-05-09 12:46:54] --- Full Suite Test Script Finished ---
+[2025-05-09 12:46:54] All logs for this session are in: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250509_124616_nixos
+[2025-05-09 12:46:54] Review the CSV summary: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/summary_fullsuite_20250509_124616.csv
+[2025-05-09 12:46:54] Review the main orchestration log: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250509_124616_nixos/main_orchestration.log

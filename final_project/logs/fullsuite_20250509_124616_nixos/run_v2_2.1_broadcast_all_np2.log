@@ -1,0 +1,5 @@
+[nixos:46889] Rank 0 bound to package[0][core:0]
+[laptopB:185549] Rank 1 bound to package[0][core:0]
+shape: 13x13x256
+Sample values: 44.4152 42.4612 40.6967 40.6967 40.6967
+Execution Time: 859.128 ms

@@ -1,0 +1,9 @@
+make: Entering directory '/home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v2_mpi_only/2.2_scatter_halo'
+rm -f src/main.o src/alexnet_mpi.o src/layers_mpi.o template
+make: Leaving directory '/home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v2_mpi_only/2.2_scatter_halo'
+make: Entering directory '/home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v2_mpi_only/2.2_scatter_halo'
+mpicxx -std=c++11 -O3 -Wall -Wextra -pedantic -Wno-cast-function-type -I./include -c src/main.cpp -o src/main.o
+mpicxx -std=c++11 -O3 -Wall -Wextra -pedantic -Wno-cast-function-type -I./include -c src/alexnet_mpi.cpp -o src/alexnet_mpi.o
+mpicxx -std=c++11 -O3 -Wall -Wextra -pedantic -Wno-cast-function-type -I./include -c src/layers_mpi.cpp -o src/layers_mpi.o
+mpicxx -std=c++11 -O3 -Wall -Wextra -pedantic -Wno-cast-function-type src/main.o src/alexnet_mpi.o src/layers_mpi.o -o template -lm
+make: Leaving directory '/home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v2_mpi_only/2.2_scatter_halo'

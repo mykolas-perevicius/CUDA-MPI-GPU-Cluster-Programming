@@ -1,0 +1,5 @@
+[nixos:47428] Rank 0 bound to package[0][core:0]
+[laptopB:185622] Rank 1 bound to package[0][core:0]
+Final Output Shape: 8x13x256
+Final Output (first 10 values): 29.2932 25.9153 23.3255 23.3255 23.3255 23.3255 23.3255 23.3255 23.3255 23.3255
+AlexNet MPI+CUDA Forward Pass completed in 898.987 ms
