@@ -14,12 +14,20 @@ CXX_MPI := mpicxx
 MPI_CFLAGS  := $(shell $(CXX_MPI) --showme:compile 2>/dev/null)
 MPI_LDFLAGS := $(filter-out -Wl%,$(shell $(CXX_MPI) --showme:link 2>/dev/null))
 
-GPU_ARCH_FLAGS := -gencode arch=compute_50,code=sm_50
+# Allow overriding from script, otherwise default
+ifndef HOST_CUDA_ARCH_FLAGS
+  EFFECTIVE_GPU_ARCH_FLAGS := \
+                        -gencode arch=compute_75,code=sm_75 \
+                        -gencode arch=compute_86,code=sm_86 \
+                        -gencode arch=compute_86,code=compute_86
+else
+  EFFECTIVE_GPU_ARCH_FLAGS := $(HOST_CUDA_ARCH_FLAGS)
+endif
 
 NVCC_FLAGS := -std=c++17 -O3 \
               -ccbin=$(CXX_MPI) \
               -Xcompiler="-Wall -Wextra $(DIAG_FLAGS) $(MPI_CFLAGS)" \
-              $(GPU_ARCH_FLAGS) \
+              $(EFFECTIVE_CUDA_ARCH) \
               -cudart=shared \
               --cudadevrt=none \
               -Xcudafe "--diag_suppress=186"

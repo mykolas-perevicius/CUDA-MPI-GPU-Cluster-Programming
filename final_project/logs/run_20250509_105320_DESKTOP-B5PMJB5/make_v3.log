@@ -1,0 +1,9 @@
+Compiling (CUDA): src/alexnet_cuda.cu
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+Compiling (CUDA): src/layers_cuda.cu
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+Compiling (C++): src/main_cuda.cpp
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+--- Linking V3 Target ---
+NVCC Command: nvcc -std=c++11 -O3 -Xcompiler="-Wall -Wextra" -cudart=shared --cudadevrt=none         -gencode arch=compute_50,code=sm_50    -o template src/alexnet_cuda.o src/layers_cuda.o src/main_cuda.o -lm                      
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
