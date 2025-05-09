@@ -28,3 +28,21 @@ Multi-Machine Test Orchestration Log
 [2025-05-09 12:22:54] --- Phase 3: Synchronizing Project Files to Worker Nodes ---
 [2025-05-09 12:22:54] Syncing project from master to myko@192.168.1.97...
 [2025-05-09 12:22:55] Attempting rsync of /home/myko/CUDA-MPI-GPU-Cluster-Programming/ to myko@192.168.1.97:/home/myko/CUDA-MPI-GPU-Cluster-Programming/
+[2025-05-09 12:22:55] SUCCESS: Sync to myko@192.168.1.97 succeeded.
+[2025-05-09 12:22:55] --- File Synchronization Phase Completed ---
+[2025-05-09 12:22:55] --- Phase 4: Creating MPI Hostfile ---
+[2025-05-09 12:22:55] MPI Hostfile created at: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_122238_nixos/mpi_cluster_hosts.txt
+[2025-05-09 12:22:55] Hostfile Contents:
+192.168.1.158 slots=1
+192.168.1.97 slots=1
+[2025-05-09 12:22:55] --- MPI Hostfile Creation Phase Completed ---
+[2025-05-09 12:22:55] --- Phase 5: Running Distributed MPI Application (V4 MPI+CUDA) ---
+[2025-05-09 12:22:55] Executing on master node (nixos): mpirun -np 2 --hostfile /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_122238_nixos/mpi_cluster_hosts.txt --report-bindings --mca btl_tcp_if_exclude lo,docker0 --mca oob_tcp_if_exclude lo,docker0 /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v4_mpi_cuda/template
+[2025-05-09 12:22:55] Output will be logged to: multirun_20250509_122238_nixos/run_v4_mpi_cuda_multi_np2.log
+[2025-05-09 12:22:58] [✔ MPI Run Command Succeeded]
+[2025-05-09 12:22:58] CSV summary for multi-run written to: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/summary_multi_20250509_122238.csv
+[2025-05-09 12:22:58] --- MPI Application Run Phase Completed ---
+[2025-05-09 12:22:58] --- Multi-Machine Test Script Finished ---
+[2025-05-09 12:22:58] Primary run log for the MPI application: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_122238_nixos/run_v4_mpi_cuda_multi_np2.log
+[2025-05-09 12:22:58] Main orchestration log: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_122238_nixos/main_orchestration.log
+[2025-05-09 12:22:58] All logs for this session are in: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_122238_nixos

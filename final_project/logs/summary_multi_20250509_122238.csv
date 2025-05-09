@@ -1,0 +1,2 @@
+SessionID,MachineSet,GitCommit,EntryTimestamp,ProjectVariant,NumProcesses,RunLogFile,RunCommandSucceeded,RunMessage,ExecutionTime_ms,OutputShape,OutputFirst5Values,OverallStatusSymbol,OverallStatusMessage
+"multirun_20250509_122238_nixos","192.168.1.158_50;192.168.1.97_50","79eb0ed","2025-05-09T12:22:58-04:00","V4 MPI+CUDA",2,"multirun_20250509_122238_nixos/run_v4_mpi_cuda_multi_np2.log",true,"Run OK","897.26","8x13x256","29.2932 25.9153 23.3255 23.3255 23.3255","✔","✔"
