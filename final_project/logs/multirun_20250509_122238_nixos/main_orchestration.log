@@ -1,0 +1,30 @@
+Multi-Machine Test Orchestration Log
+[2025-05-09 12:22:38] Starting Multi-Machine Test Script...
+[2025-05-09 12:22:38] Session ID: multirun_20250509_122238_nixos
+[2025-05-09 12:22:38] Logging to Directory: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_122238_nixos
+[2025-05-09 12:22:38] Project Root: /home/myko/CUDA-MPI-GPU-Cluster-Programming
+[2025-05-09 12:22:38] Final Project Dir: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project
+[2025-05-09 12:22:38] Target Executable: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v4_mpi_cuda/template
+[2025-05-09 12:22:38] Target hosts configured:
+[2025-05-09 12:22:38]   - myko@192.168.1.158 50
+[2025-05-09 12:22:38]   - myko@192.168.1.97 50
+[2025-05-09 12:22:38] --- Phase 1: Checking/Setting up Passwordless SSH ---
+[2025-05-09 12:22:38] Local SSH key found (/home/myko/.ssh/id_rsa.pub).
+[2025-05-09 12:22:38] Checking SSH to myko@192.168.1.158 from master (myko@nixos)...
+[2025-05-09 12:22:38] INFO: Passwordless SSH to myko@192.168.1.158 not working or requires confirmation.
+[2025-05-09 12:22:38] Attempting 'ssh-copy-id myko@192.168.1.158'. You may be prompted for the password for 'myko' on '192.168.1.158'.
+[2025-05-09 12:22:47] SUCCESS: 'ssh-copy-id myko@192.168.1.158' completed.
+[2025-05-09 12:22:47] Verifying new passwordless SSH connection to myko@192.168.1.158...
+[2025-05-09 12:22:47] SUCCESS: Passwordless SSH to myko@192.168.1.158 confirmed.
+[2025-05-09 12:22:47] Checking SSH to myko@192.168.1.97 from master (myko@nixos)...
+[2025-05-09 12:22:47] SUCCESS: Passwordless SSH to myko@192.168.1.97 already configured.
+[2025-05-09 12:22:47] --- SSH Setup Phase Completed ---
+[2025-05-09 12:22:47] --- Phase 2: Building Project (V4 MPI+CUDA) for Target Architectures ---
+[2025-05-09 12:22:47] Compiling for unique CUDA compute capabilities: 50
+[2025-05-09 12:22:47] Effective architecture flags for make: -gencode arch=compute_50,code=sm_50 -gencode arch=compute_50,code=compute_50 
+[2025-05-09 12:22:47] Executing build (Log: multirun_20250509_122238_nixos/make_v4_mpi_cuda_multi_arch.log)...
+[2025-05-09 12:22:54] [✔ Build Succeeded: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v4_mpi_cuda/template found]
+[2025-05-09 12:22:54] --- Build Phase Completed ---
+[2025-05-09 12:22:54] --- Phase 3: Synchronizing Project Files to Worker Nodes ---
+[2025-05-09 12:22:54] Syncing project from master to myko@192.168.1.97...
+[2025-05-09 12:22:55] Attempting rsync of /home/myko/CUDA-MPI-GPU-Cluster-Programming/ to myko@192.168.1.97:/home/myko/CUDA-MPI-GPU-Cluster-Programming/
