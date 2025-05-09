@@ -27,10 +27,13 @@ endif
 NVCC_FLAGS := -std=c++17 -O3 \
               -ccbin=$(CXX_MPI) \
               -Xcompiler="-Wall -Wextra $(DIAG_FLAGS) $(MPI_CFLAGS)" \
-              $(EFFECTIVE_CUDA_ARCH) \
+              $(EFFECTIVE_GPU_ARCH_FLAGS) \
               -cudart=shared \
               --cudadevrt=none \
               -Xcudafe "--diag_suppress=186"
+
+$(info EFFECTIVE_GPU_ARCH_FLAGS is [$(EFFECTIVE_GPU_ARCH_FLAGS)])
+$(info HOST_CUDA_ARCH_FLAGS is [$(HOST_CUDA_ARCH_FLAGS)])
 
 INCLUDES := -I./include
 TARGET   := template
@@ -46,14 +49,20 @@ LDFLAGS := $(MPI_LDFLAGS) -lm
 .PHONY: all clean
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(NVCC) $(NVCC_FLAGS) $^ -o $@ $(LDFLAGS)
-
 $(OBJS_CU): %.o: %.cu $(wildcard include/*.hpp) Makefile
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -dc $< -o $@
+	@echo "Compiling .cu file: $<"
+	@echo "Command: $(NVCC) $(NVCC_FLAGS) $(INCLUDES) -dc $< -o $@"
+	@$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -dc $< -o $@
 
 $(OBJS_CPP): %.o: %.cpp $(wildcard include/*.hpp) Makefile		
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -c  $< -o $@
+	@echo "Compiling .cpp file: $<"
+	@echo "Command: $(NVCC) $(NVCC_FLAGS) $(INCLUDES) -c  $< -o $@"
+	@$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -c  $< -o $@
 
+$(TARGET): $(OBJS)
+	@echo "Linking target: $@"
+	@echo "Command: $(NVCC) $(NVCC_FLAGS) $^ -o $@ $(LDFLAGS)"
+	@$(NVCC) $(NVCC_FLAGS) $^ -o $@ $(LDFLAGS)
+  
 clean:
 	rm -f $(TARGET) $(OBJS)
