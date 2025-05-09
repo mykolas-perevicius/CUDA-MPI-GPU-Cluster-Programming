@@ -1,0 +1,45 @@
+Multi-Machine Test Orchestration Log - Session: multirun_20250509_123153_nixos
+[2025-05-09 12:31:53] Starting Multi-Machine Test Script...
+[2025-05-09 12:31:53] Session ID: multirun_20250509_123153_nixos
+[2025-05-09 12:31:53] Logging to Directory: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_123153_nixos
+[2025-05-09 12:31:53] Project Root: /home/myko/CUDA-MPI-GPU-Cluster-Programming
+[2025-05-09 12:31:53] Final Project Dir: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project
+[2025-05-09 12:31:53] Target Executable Full Path (must be same on all nodes if not using shared FS): /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v4_mpi_cuda/template
+[2025-05-09 12:31:53] Target hosts configured:
+[2025-05-09 12:31:53]   - myko@192.168.1.158 50
+[2025-05-09 12:31:53]   - myko@192.168.1.97 50
+[2025-05-09 12:31:53] --- Phase 1: Checking/Setting up Passwordless SSH ---
+[2025-05-09 12:31:53] Local SSH key found (/home/myko/.ssh/id_rsa.pub).
+[2025-05-09 12:31:53] Checking SSH to myko@192.168.1.158 from master (myko@192.168.1.158)...
+[2025-05-09 12:31:53] SUCCESS: Passwordless SSH to myko@192.168.1.158 already configured.
+[2025-05-09 12:31:53] Checking SSH to myko@192.168.1.97 from master (myko@192.168.1.158)...
+[2025-05-09 12:31:54] SUCCESS: Passwordless SSH to myko@192.168.1.97 already configured.
+[2025-05-09 12:31:54] --- SSH Setup Phase Completed ---
+[2025-05-09 12:31:54] --- Phase 2: Building Project (V4 MPI+CUDA) for Target Architectures ---
+[2025-05-09 12:31:54] Compiling for unique CUDA compute capabilities: 50
+[2025-05-09 12:31:54] Effective architecture flags for make: -gencode arch=compute_50,code=sm_50 -gencode arch=compute_50,code=compute_50 
+[2025-05-09 12:31:54] Executing build in /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v4_mpi_cuda (Log: multirun_20250509_123153_nixos/make_v4_mpi_cuda_multi_arch.log)...
+[2025-05-09 12:32:00] [✔ Build Succeeded: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v4_mpi_cuda/template found]
+[2025-05-09 12:32:00] --- Build Phase Completed ---
+[2025-05-09 12:32:00] --- Phase 3: Synchronizing Project Files to Worker Nodes ---
+[2025-05-09 12:32:00] Syncing project from master to myko@192.168.1.97...
+[2025-05-09 12:32:01] Attempting rsync of /home/myko/CUDA-MPI-GPU-Cluster-Programming/ to myko@192.168.1.97:/home/myko/CUDA-MPI-GPU-Cluster-Programming/
+[2025-05-09 12:32:01] SUCCESS: Sync to myko@192.168.1.97 succeeded.
+[2025-05-09 12:32:01] --- File Synchronization Phase Completed ---
+[2025-05-09 12:32:01] --- Phase 4: Creating MPI Hostfile ---
+[2025-05-09 12:32:01] MPI Hostfile created at: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_123153_nixos/mpi_cluster_hosts.txt
+[2025-05-09 12:32:01] Hostfile Contents:
+192.168.1.158 slots=1
+192.168.1.97 slots=1
+[2025-05-09 12:32:01] --- MPI Hostfile Creation Phase Completed ---
+[2025-05-09 12:32:01] --- Phase 5: Running Distributed MPI Application (V4 MPI+CUDA) ---
+[2025-05-09 12:32:01] Executing on master node (nixos): mpirun -np 2 --hostfile /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_123153_nixos/mpi_cluster_hosts.txt --report-bindings --mca btl_tcp_if_exclude lo,docker0,virbr0 --mca oob_tcp_if_exclude lo,docker0,virbr0 /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/v4_mpi_cuda/template
+[2025-05-09 12:32:01] Output will be logged to: multirun_20250509_123153_nixos/run_v4_mpi_cuda_multi_np2.log
+[2025-05-09 12:32:04] [✔ MPI Run Command Succeeded]
+[2025-05-09 12:32:04] CSV summary for multi-run written to: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/summary_multi_20250509_123153.csv
+[2025-05-09 12:32:04] --- MPI Application Run Phase Completed ---
+[2025-05-09 12:32:04] --- Multi-Machine Test Script Finished ---
+[2025-05-09 12:32:04] Primary run log for the MPI application: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_123153_nixos/run_v4_mpi_cuda_multi_np2.log
+[2025-05-09 12:32:04] Main orchestration log: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_123153_nixos/main_orchestration.log
+[2025-05-09 12:32:04] All logs for this session are in: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/multirun_20250509_123153_nixos
+[2025-05-09 12:32:04] Review the CSV summary: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/summary_multi_20250509_123153.csv
