@@ -1,0 +1,3 @@
+Final Output Shape: 13x13x256
+Final Output (first 10 values): 29.2932 25.9153 23.3255 23.3255 23.3255 23.3255 23.3255 23.3255 23.3255 23.3255
+AlexNet MPI+CUDA Forward Pass completed in 735.273 ms

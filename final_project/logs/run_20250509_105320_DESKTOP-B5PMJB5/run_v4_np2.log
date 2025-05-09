@@ -7,3 +7,6 @@ NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
 You may or may not see output from other processes, depending on
 exactly when Open MPI kills them.
 --------------------------------------------------------------------------
+[Rank 1] CUDA error in src/layers_mpi_cuda.cu:102: named symbol not found (500)
+[DESKTOP-B5PMJB5:07828] 1 more process has sent help message help-mpi-api.txt / mpi-abort
+[DESKTOP-B5PMJB5:07828] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages

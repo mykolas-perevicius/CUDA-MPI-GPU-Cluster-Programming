@@ -1,0 +1,70 @@
+--- Saving PC Environment Info to pc_v4_environment_info.txt ---
+
+=== Package Versions ===
+[GCC]
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0
+Copyright (C) 2023 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+
+[MPI]
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0
+Copyright (C) 2023 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Open MPI v4.1.6
+
+http://www.open-mpi.org/community/help/
+
+[CUDA Toolkit (nvcc)]
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2025 NVIDIA Corporation
+Built on Fri_Feb_21_20:23:50_PST_2025
+Cuda compilation tools, release 12.8, V12.8.93
+Build cuda_12.8.r12.8/compiler.35583870_0
+
+=== MPI Configuration ===
+[mpicc Compile Flags]
+-I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi
+
+[mpicc Link Flags]
+-L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi
+
+[Open MPI CUDA Awareness Check]
+ompi_info not found or CUDA awareness info not present
+
+=== CUDA/GPU Driver Info ===
+Mon May  5 11:54:12 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.51.02              Driver Version: 576.02         CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 3090        On  |   00000000:08:00.0  On |                  N/A |
+|  0%   28C    P5             44W /  420W |    1944MiB /  24576MiB |     47%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A              25      G   /Xwayland                             N/A      |
++-----------------------------------------------------------------------------------------+
+
+=== Environment Variables ===
+[PATH]
+/usr/local/cuda-12.8/bin:/home/myko/.nvm/versions/node/v22.14.0/bin:/home/myko/.cache/cloud-code/m2c/bin:/home/myko/.vscode-server/bin/17baf841131aa23349f217ca7c570c76ee87b957/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Python312/Scripts/:/mnt/c/Python312/:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7/bin:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7/libnvvp:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.2/bin:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.2/libnvvp:/mnt/c/Python311/Scripts/:/mnt/c/Python311/:/mnt/c/Program Files/Eclipse Adoptium/jdk-17.0.4.101-hotspot/bin:/mnt/c/Program Files/Oculus/Support/oculus-runtime:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/mnt/c/Program Files/Microsoft VS Code/bin:/mnt/c/Program Files (x86)/dotnet/:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Git/cmd:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/ProgramData/chocolatey/bin:/mnt/c/Program Files/NVIDIA Corporation/Nsight Compute 2022.2.1/:/mnt/c/Program Files/GitHub CLI/:/mnt/c/ffmpeg/bin:/mnt/c/Program Files/MongoDB/Server/7.0/bin:/mnt/c/Program Files/Oracle/VirtualBox/VirtualBox.exe:/mnt/c/Program Files/Oracle/VirtualBox/VBoxManage.exe:/mnt/c/msys64/ucrt64/bin:/mnt/c/Program Files/NVIDIA Corporation/NVIDIA app/NvDLISR:/mnt/c/Users/miciu/Downloads/kotlin-compiler-2.1.10/kotlinc/bin:/mnt/c/Users/miciu/AppData/Local/Programs/cursor/resources/app/bin:/mnt/c/Program Files/usbipd-win/:/mnt/c/Program Files/Go/bin:/mnt/c/Program Files/nodejs/:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/Python312/Scripts/:/mnt/c/Python312/:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7/bin:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7/libnvvp:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.2/bin:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.2/libnvvp:/mnt/c/Python311/Scripts/:/mnt/c/Python311/:/mnt/c/Program Files/Eclipse Adoptium/jdk-17.0.4.101-hotspot/bin:/mnt/c/Program Files/Oculus/Support/oculus-runtime:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/mnt/c/Program Files/Microsoft VS Code/bin:/mnt/c/Program Files (x86)/dotnet/:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Git/cmd:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/ProgramData/chocolatey/bin:/mnt/c/Program Files/NVIDIA Corporation/Nsight Compute 2022.2.1/:/mnt/c/Program Files/GitHub CLI/:/mnt/c/ffmpeg/bin:/mnt/c/Program Files/MongoDB/Server/7.0/bin:/mnt/c/Program Files/Oracle/VirtualBox/VirtualBox.exe:/mnt/c/Program Files/Oracle/VirtualBox/VBoxManage.exe:/mnt/c/msys64/ucrt64/bin:/mnt/c/Program Files/NVIDIA Corporation/NVIDIA app/NvDLISR:/mnt/c/Users/miciu/Downloads/kotlin-compiler-2.1.10/kotlinc/bin:/mnt/c/Users/miciu/AppData/Local/Programs/cursor/resources/app/bin:/mnt/c/Program Files/usbipd-win/:/mnt/c/Program Files/Go/bin:/mnt/c/Program Files/nodejs/:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/Users/miciu/AppData/Local/bin/NASM:/mnt/c/Users/miciu/AppData/Local/Programs/cursor/resources/app/bin:/mnt/c/Users/miciu/go/bin:/mnt/c/Users/miciu/AppData/Roaming/npm:/mnt/c/Users/miciu/.dotnet/tools:/home/myko/.vscode-server/extensions/ms-python.debugpy-2025.6.0-linux-x64/bundled/scripts/noConfigScripts:/home/myko/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand:/usr/local/go/bin
+
+[LD_LIBRARY_PATH]
+/usr/local/cuda-12.8/lib64
+
+=== Packaging Code (from /home/myko/CS485) ===
+Error creating tar archive!
+
+--- Environment info gathering complete. ---

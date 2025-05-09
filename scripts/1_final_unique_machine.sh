@@ -16,6 +16,43 @@ mkdir -p "$SESSION_LOG_DIR"
 CSV_OUTPUT_FILE="$LOGS_BASE/summary_${SESSION_TIMESTAMP}_${MACHINE_ID}.csv"
 GIT_COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "N/A")
 
+HOST_CUDA_ARCH_FLAGS_FOR_MAKE="" # Global variable to store detected flags
+
+detect_and_set_cuda_arch_flags() {
+    local detected_arch_flags=""
+    if command -v nvidia-smi &> /dev/null; then
+        # Get compute capability for the first GPU, format as XY (e.g., 8.6 -> 86)
+        # Assumes all GPUs on a single machine for this script are similar enough,
+        # or that targeting the first one is sufficient.
+        local compute_cap_dotted
+        compute_cap_dotted=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -n 1)
+
+        if [[ -n "$compute_cap_dotted" ]]; then
+            local major_minor_nodot
+            major_minor_nodot=$(echo "$compute_cap_dotted" | tr -d '.')
+            if [[ -n "$major_minor_nodot" ]]; then
+                # Generate flags for the specific detected architecture
+                # (e.g., -gencode arch=compute_86,code=sm_86)
+                # And add a PTX version for forward compatibility
+                # (e.g., -gencode arch=compute_86,code=compute_86)
+                detected_arch_flags="-gencode arch=compute_${major_minor_nodot},code=sm_${major_minor_nodot} -gencode arch=compute_${major_minor_nodot},code=compute_${major_minor_nodot}"
+                echo "  [INFO] Detected GPU arch: sm_${major_minor_nodot}. Using compile flags: ${detected_arch_flags}"
+            else
+                echo "  [WARN] Could not parse major/minor from compute capability: $compute_cap_dotted. Will use Makefile defaults."
+            fi
+        else
+            echo "  [WARN] nvidia-smi found, but could not determine compute_cap. Will use Makefile defaults."
+        fi
+    else
+        echo "  [WARN] nvidia-smi not found. Will use Makefile defaults for CUDA architecture."
+    fi
+    HOST_CUDA_ARCH_FLAGS_FOR_MAKE="$detected_arch_flags"
+}
+
+# Call detection early in the script
+detect_and_set_cuda_arch_flags
+
+
 # --- CSV Logging ---
 # Write CSV Header
 echo "SessionID,MachineID,GitCommit,EntryTimestamp,ProjectVariant,NumProcesses,MakeLogFile,BuildSucceeded,BuildMessage,RunLogFile,RunCommandSucceeded,RunEnvironmentWarning,RunMessage,ParseSucceeded,ParseMessage,OverallStatusSymbol,OverallStatusMessage,ExecutionTime_ms,OutputShape,OutputFirst5Values" > "$CSV_OUTPUT_FILE"
@@ -270,7 +307,11 @@ make_log_rel_path="$SESSION_ID/$make_log_name"
 echo "--- Building V3 (Log: $make_log_rel_path) ---"
 make_succeeded_bool=false; build_message="✘ (init build status)"
 
-make clean > /dev/null && make >> "$make_log_path" 2>&1
+if [[ -n "$HOST_CUDA_ARCH_FLAGS_FOR_MAKE" ]]; then
+    make HOST_CUDA_ARCH_FLAGS="$HOST_CUDA_ARCH_FLAGS_FOR_MAKE" clean > /dev/null && make HOST_CUDA_ARCH_FLAGS="$HOST_CUDA_ARCH_FLAGS_FOR_MAKE" >> "$make_log_path" 2>&1
+else
+    make clean > /dev/null && make >> "$make_log_path" 2>&1
+fi
 make_exit_code=$?
 if [[ $make_exit_code -eq 0 ]]; then
     if [[ -f ./template ]]; then
@@ -352,8 +393,14 @@ make_log_rel_path="$SESSION_ID/$make_log_name"
 echo "--- Building V4 (Log: $make_log_rel_path) ---"
 v4_make_succeeded_bool=false; v4_build_message="✘ (init build status)" # Renamed to avoid conflict in loop
 
-make clean > /dev/null && make >> "$make_log_path" 2>&1
+# MODIFIED MAKE COMMAND
+if [[ -n "$HOST_CUDA_ARCH_FLAGS_FOR_MAKE" ]]; then
+    make HOST_CUDA_ARCH_FLAGS="$HOST_CUDA_ARCH_FLAGS_FOR_MAKE" clean > /dev/null && make HOST_CUDA_ARCH_FLAGS="$HOST_CUDA_ARCH_FLAGS_FOR_MAKE" >> "$make_log_path" 2>&1
+else
+    make clean > /dev/null && make >> "$make_log_path" 2>&1
+fi
 make_exit_code=$?
+
 if [[ $make_exit_code -eq 0 ]]; then
     if [[ -f ./template ]]; then
         echo "  [✔ make succeeded and './template' found]"
