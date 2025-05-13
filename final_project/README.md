@@ -1,246 +1,539 @@
-# CS485: GPU Cluster Programming (MPI+CUDA) – Final Project: AlexNet Inference
+# CS485: GPU Cluster Programming (MPI+CUDA) - Comprehensive Repository
 
-This directory contains the code, documentation, and resources for the final project of the CS485 GPU Cluster Programming course: an evolving MPI+CUDA implementation of AlexNet inference. The project follows a staged development approach, progressing from serial execution to advanced hybrid parallelism.
+Welcome to Mykolas Perevicius's repository for CS485: GPU Cluster Programming at NJIT. This repository directory contains the final project code (AlexNet inference implementation), assignments, and supporting materials. Our objective is to develop robust, high-performance parallel programs using MPI, CUDA, and their combination for GPU clusters.
 
-**Project Scope Clarification:** The primary focus of the V1-V5 implementation plan is on the **initial two blocks** of the AlexNet architecture (Conv1->ReLU->Pool1 and Conv2->ReLU->Pool2->LRN2). This provides a representative and computationally significant workload for learning and comparing parallelization techniques (MPI, CUDA, Hybrid). Implementing the *full* AlexNet network (including Conv3-5, FC6-8, Softmax) is considered an extension task to be undertaken only *after* the successful completion and analysis of V1-V5 for the initial subset, if time permits.
-
-![AlexNet Diagram](docs/1_M4jjkOPxvOYNk8f1c7rOcQ.png)
+---
 
 ## Table of Contents
-1.  [Project Overview](#1-project-overview)
-2.  [Target Environment](#2-target-environment)
-3.  [Repository Structure (This Directory)](#3-repository-structure-this-directory)
-4.  [Project Version Implementation Plan (Blocks 1 & 2 Focus)](#4-project-version-implementation-plan-blocks-1--2-focus)
-    *   [Version 1: Serial CPU](#version-1-serial-cpu---completed)
-    *   [Version 2: MPI Only (CPU)](#version-2-mpi-only-cpu---completed)
-        *   [Approach 2.1: Broadcast All](#approach-21-broadcast-all---implemented)
-        *   [Approach 2.2: Scatter + Halo](#approach-22-scatter--halo---implemented)
-    *   [Version 3: CUDA Only (Single GPU)](#version-3-cuda-only-single-gpu---completed)
-    *   [Version 4: MPI + CUDA (Hybrid)](#version-4-mpi--cuda-hybrid---implemented-debugging)
-    *   [Version 5: CUDA-Aware MPI (Optional Optimization)](#version-5-cuda-aware-mpi-optional-optimization---pending)
-5.  [Key Technologies](#5-key-technologies)
-6.  [Current Implementation Status & Performance Highlights](#6-current-implementation-status--performance-highlights)
-7.  [Development Workflow for Versions](#7-development-workflow-for-versions)
-8.  [Build & Test Instructions per Version](#8-build--test-instructions-per-version)
-9.  [Presentation Strategy](#9-presentation-strategy)
-10. [Troubleshooting](#10-troubleshooting)
-11. [Future Directions & Extensions](#11-future-directions--extensions)
-12. [References & Resources](#12-references--resources)
 
-## 1. Project Overview
-This project implements inference for the **initial two blocks** of the AlexNet convolutional neural network (Conv1->ReLU->Pool1 and Conv2->ReLU->Pool2->LRN2). The primary goal is to learn and apply different parallel programming paradigms (MPI, CUDA, MPI+CUDA) to this representative workload and to systematically evaluate their performance impact through a structured, incremental 5-version approach. The focus is on the parallelization techniques and performance analysis, rather than building a complete end-to-end classifier.
+- [Overview](#overview)
+- [Repository Structure](#repository-structure)
+- [Target Environment](#target-environment)
+- [Project Core: AlexNet Inference (Blocks 1 & 2)](#project-core-alexnet-inference-blocks-1--2)
+  - [Problem Definition](#problem-definition)
+  - [Input and Output](#input-and-output)
+- [Staged Implementation Details (V1-V4)](#staged-implementation-details-v1-v4)
+  - [V1: Serial CPU (Baseline)](#v1-serial-cpu-baseline)
+    - [Goal and Paradigm](#goal-and-paradigm-v1)
+    - [Key Implementation Strategy & Code Examples V1](#key-implementation-strategy--code-examples-v1)
+    - [Key Files V1](#key-files-v1)
+    - [Makefile Highlights V1](#makefile-highlights-v1)
+  - [V2.2: MPI Only (Scatter+Halo)](#v22-mpi-only-scatterhalo)
+    - [Goal and Paradigm V2.2](#goal-and-paradigm-v22)
+    - [Key Implementation Strategy & Code Examples V2.2](#key-implementation-strategy--code-examples-v22)
+    - [Key Files V2.2](#key-files-v22)
+    - [Makefile Highlights V2.2](#makefile-highlights-v22)
+  - [V3: CUDA Only (Single GPU)](#v3-cuda-only-single-gpu)
+    - [Goal and Paradigm V3](#goal-and-paradigm-v3)
+    - [Key Implementation Strategy & Code Examples V3](#key-implementation-strategy--code-examples-v3)
+    - [Key Files V3](#key-files-v3)
+    - [Makefile Highlights V3](#makefile-highlights-v3)
+  - [V4: MPI+CUDA (Hybrid Host-Staging)](#v4-mpicuda-hybrid-host-staging)
+    - [Goal and Paradigm V4](#goal-and-paradigm-v4)
+    - [Key Implementation Strategy & Code Examples V4](#key-implementation-strategy--code-examples-v4)
+    - [Key Files V4](#key-files-v4)
+    - [Makefile Highlights V4](#makefile-highlights-v4)
+- [Compilation and Execution Summary](#compilation-and-execution-summary)
+- [Summary of Performance Findings and Conclusions](#summary-of-performance-findings-and-conclusions)
+  - [Performance Highlights](#performance-highlights)
+  - [Key Bottlenecks Identified](#key-bottlenecks-identified)
+  - [Overall Lessons Learned](#overall-lessons-learned)
+- [Future Work Highlights](#future-work-highlights)
+- [Project Report](#project-report)
 
-**Core Task:** Implement and benchmark inference for AlexNet Blocks 1 & 2 across different parallelization stages (V1-V5).
+---
 
-**Parallelization Strategy (V4/V5):** Primarily data parallelism. Input data rows are distributed across MPI ranks (Scatter+Halo).
-*   **V4 Approach:** Each rank performs MPI halo exchange using host buffers, copies its padded data tile to the GPU, executes the *entire* V3 CUDA layer sequence on that tile using a helper function (`alexnetTileForwardCUDA`), copies the result tile back to the host, and trims halo-related rows on the host before the final MPI gather.
-*   **V5 Approach (Planned):** Optimize V4 using CUDA-aware MPI calls to potentially eliminate explicit host staging for MPI communication.
+## Overview
 
-## 2. Target Environment
-Code must ultimately compile and run correctly under the course's specified environment:
-- **OS:** Fedora 37
-- **Compilers:** GCC 12 (for host code), `mpicc`/`mpicxx` (MPI wrappers), `nvcc` (CUDA compiler)
-- **GPU Toolkit:** CUDA 12.x
-- **MPI:** Open MPI (ideally compiled with CUDA-awareness for V5)
+This repository serves as a comprehensive workspace for CS485. The final project, demonstrating an implementation of AlexNet inference for the initial two blocks (Conv1 $\rightarrow$ ReLU $\rightarrow$ MaxPool1 and Conv2 $\rightarrow$ ReLU $\rightarrow$ MaxPool2 $\rightarrow$ LRN2), is the centerpiece. It leverages a data-parallel strategy over MPI ranks and explores different parallel programming paradigms. Automation scripts ensure reproducible builds, testing across various configurations, and final packaging for submission. The project aims not only to achieve parallelism but also to critically analyze the performance trade-offs and complexities inherent in each approach.
 
-Local development is done in WSL2 (Ubuntu) with compatible toolchains, but final testing should target the Fedora environment.
+---
 
-## 3. Repository Structure (This Directory)
+## Repository Structure
 
+The repository is organized as follows:
+
+-   **`final_project/`**: Contains the core source code for the AlexNet inference project, divided into subdirectories for each implementation version (V1, V2.1, V2.2, V3, V4).
+    -   **`v1_serial/`**: Serial CPU implementation.
+    -   **`v2_mpi_only/`**: MPI-only implementations.
+        -   **`2.1_broadcast_all/`**: MPI with data broadcast.
+        -   **`2.2_scatter_halo/`**: MPI with input scatter and halo exchange.
+    -   **`v3_cuda_only/`**: CUDA-only single GPU implementation.
+    -   **`v4_mpi_cuda/`**: Hybrid MPI+CUDA implementation (host-staging).
+    -   **`data/`**: (Potentially) Input data, weights, etc. (though initialization is often programmatic in this project).
+    -   **`docs/`**: Supplementary documentation, images used in reports/presentations.
+    -   **`logs/`**: Directory for storing execution logs and performance results.
+-   **`scripts/`**: Bash scripts for automating tasks like building, running tests, and packaging.
+-   **`homeworks/`**: (If applicable) Solutions to course homework assignments.
+-   **`README.md`**: This file, providing a comprehensive guide to the repository.
+-   **Other files**: Configuration files (e.g., `.gitignore`, `shell.nix`), potentially the final PDF report.
+
+---
+
+## Target Environment
+
+The project code is developed to be compatible with and is primarily benchmarked on the following target environment:
+-   **Operating System:** Fedora 37
+-   **Host Compiler:** GCC 12
+-   **MPI Implementation:** Open MPI (version 4.1.x or similar, accessible via `mpicc`/`mpicxx`)
+-   **GPU Toolkit:** NVIDIA CUDA 12.x (`nvcc` compiler)
+-   Local development was often performed on NixOS with a similar toolchain, ensuring portability.
+
+---
+
+## Project Core: AlexNet Inference (Blocks 1 & 2)
+
+### Problem Definition
+
+The project focuses on implementing and parallelizing the inference (forward pass) for the first two computationally significant blocks of the AlexNet CNN. The sequence of layers is:
+1.  **Block 1:** Convolution 1 (Conv1) $\rightarrow$ ReLU1 $\rightarrow$ Max Pooling 1 (Pool1)
+2.  **Block 2:** Convolution 2 (Conv2) $\rightarrow$ ReLU2 $\rightarrow$ Max Pooling 2 (Pool2) $\rightarrow$ Local Response Normalization 2 (LRN2)
+
+### Input and Output
+
+-   **Input:** A single image represented as a 3D tensor of size 227x227x3 (Height x Width x Channels - RGB), with floating-point values. Total input elements: 154,587 floats.
+-   **Output:** A 3D feature map tensor of size 13x13x256 (Height x Width x Channels), also with floating-point values. Total output elements: 43,264 floats.
+
+Key operations include:
+-   **Conv1:** 96 filters of 11x11x3, Stride 4.
+-   **Conv2:** 256 filters of 5x5x96, Stride 1, Padding 2.
+
+---
+
+## Staged Implementation Details (V1-V4)
+
+The project progressed through four distinct versions, each building upon the last or exploring a different parallel paradigm.
+
+### V1: Serial CPU (Baseline)
+
+#### Goal and Paradigm V1
+To establish a functionally correct, single-threaded C++ implementation running on a single CPU core. This serves as the reference for correctness and the baseline for performance comparisons.
+
+#### Key Implementation Strategy & Code Examples V1
+All operations (convolution, ReLU, pooling, LRN) are implemented using standard C++ loops. Data is typically stored in `std::vector<float>`.
+
+**Orchestration (`alexnet_serial.cpp`):**
+The `alexnetForwardPass` function sequentially calls each layer function, passing data between them using intermediate `std::vector` buffers. It uses a double-buffering technique (`current_input`, `current_output` pointers swapping) to manage data flow.
+
+```cpp
+// In alexnet_serial.cpp
+void alexnetForwardPass(
+    std::vector<float>& input_data,
+    const LayerParams& paramsConv1,
+    const LayerParams& paramsConv2,
+    int H, int W, int C)
+{
+    // ... setup, timing ...
+    std::vector<float> buffer1, buffer2;
+    std::vector<float>* current_input = &input_data;
+    std::vector<float>* current_output = &buffer1;
+    // ...
+    // Block 1
+    // Conv1
+    serialConvLayer(*current_output, *current_input, paramsConv1.weights, /*...*/);
+    std::swap(current_input, current_output); // Output of Conv1 becomes input for ReLU1
+    // ReLU1
+    serialReluLayer(*current_input); // In-place
+    // Pool1
+    serialMaxPoolLayer(*current_output, *current_input, /*...*/);
+    std::swap(current_input, current_output);
+    // ... Block 2 follows similarly ...
+}
 ```
-final_project/
-├── v1_serial/ # V1: Serial CPU implementation (COMPLETE)
-│ ├── include/
-│ ├── src/
-│ └── Makefile
-├── v2_mpi_only/ # V2: MPI-only (CPU cores) implementation (COMPLETE)
-│ ├── 2.1_broadcast_all/ # -> Approach 2.1 (Implemented)
-│ │ ├── include/
-│ │ ├── src/
-│ │ └── Makefile
-│ └── 2.2_scatter_halo/ # -> Approach 2.2 (Implemented)
-│ ├── include/
-│ ├── src/
-│ └── Makefile
-├── v3_cuda_only/ # V3: CUDA-only (single GPU) implementation (COMPLETE)
-│ ├── include/
-│ ├── src/
-│ └── Makefile
-├── v4_mpi_cuda/ # V4: Baseline MPI + CUDA implementation (IMPLEMENTED - DEBUGGING)
-│ ├── include/
-│ ├── src/
-│ └── Makefile
-├── v5_cuda_aware_mpi/ # V5: Optional CUDA-aware MPI optimization (PENDING - Baseline Code)
-│ ├── include/
-│ ├── src/
-│ └── Makefile
-├── data/ # SHARED: Input data, model weights, etc. (Accessed via ../data/ or ../../data/)
-├── docs/ # SHARED: Project documentation, design notes (Accessed via ../docs/ or ../../docs/)
-├── logs/ # Basic run logs (gitignored)
-├── logs_extended/ # Detailed performance logs (gitignored)
-├── ai_context.txt # Technical context summary for AI assistant
-├── discussion.md # Rolling log for professor meetings
-├── project.txt # Concatenated source code dump (generated by script)
-├── RESEARCH.md # Research findings, critical analysis, references
-└── README.md # This file
+
+**Convolution Layer (`layers_serial.cpp`):**
+A naive convolution implemented with nested loops.
+```cpp
+// In layers_serial.cpp
+void serialConvLayer(
+    std::vector<float>& output,
+    const std::vector<float>& input,
+    const std::vector<float>& weights,
+    const std::vector<float>& biases,
+    int H, int W, int C, // Input dimensions
+    int K, // Num output channels (filters)
+    int F, // Filter size
+    int S, // Stride
+    int P  // Padding
+) {
+    int Ho = (H - F + 2 * P) / S + 1;
+    int Wo = (W - F + 2 * P) / S + 1;
+    // For each output channel (filter k)
+    for (int k = 0; k < K; ++k) {
+        // For each output row (ho)
+        for (int ho = 0; ho < Ho; ++ho) {
+            // For each output column (wo)
+            for (int wo = 0; wo < Wo; ++wo) {
+                float sum = biases[k];
+                // For each input channel (c)
+                for (int c_in = 0; c_in < C; ++c_in) {
+                    // For each filter row (fh)
+                    for (int fh = 0; fh < F; ++fh) {
+                        // For each filter column (fw)
+                        for (int fw = 0; fw < F; ++fw) {
+                            int hi = ho * S - P + fh; // Input row
+                            int wi = wo * S - P + fw; // Input col
+                            if (hi >= 0 && hi < H && wi >= 0 && wi < W) {
+                                // input_idx maps (hi, wi, c_in)
+                                // weight_idx maps (k, c_in, fh, fw)
+                                sum += input[input_idx] * weights[weight_idx];
+                            }
+                        }
+                    }
+                }
+                output[output_idx] = sum; // output_idx maps (ho, wo, k)
+            }
+        }
+    }
+}```
+
+#### Key Files V1
+-   `v1_serial/src/main.cpp`
+-   `v1_serial/src/alexnet_serial.cpp`
+-   `v1_serial/src/layers_serial.cpp`
+-   `v1_serial/include/alexnet.hpp`, `v1_serial/include/layers.hpp`
+
+#### Makefile Highlights V1
+Uses `g++` for compilation with standard C++11 flags and optimization (`-O3`).
+
+### V2.2: MPI Only (Scatter+Halo)
+
+#### Goal and Paradigm V2.2
+To parallelize the serial CPU implementation across multiple CPU cores on potentially multiple machines using the Message Passing Interface (MPI). This version focuses on a scalable domain decomposition strategy (row-wise scatter of input feature maps) with halo exchange for boundary computations. SPMD (Single Program, Multiple Data) model.
+
+#### Key Implementation Strategy & Code Examples V2.2
+The root MPI rank (rank 0) initializes data and parameters. Parameters (weights, biases) are broadcast to all ranks. The input image's rows are scattered among MPI ranks. For convolutional layers, ranks that process boundary regions of their data slice need data from neighboring ranks ("halos"). This is achieved using non-blocking MPI sends/receives (`MPI_Isend`, `MPI_Irecv`) followed by `MPI_Waitall`. After local computation (Conv $\rightarrow$ ReLU $\rightarrow$ Pool), ranks perform an "asymmetric trim" of their output feature maps to remove rows affected by halo data from other ranks, especially after pooling layers change dimensions. Finally, rank 0 gathers the valid output slices.
+
+**Main Logic (`v2_mpi_only/2.2_scatter_halo/src/main.cpp`):**
+```cpp
+// In v2_mpi_only/2.2_scatter_halo/src/main.cpp
+// ... MPI_Init, rank, size ...
+// 1. Rank 0 initializes full input & parameters
+// 2. Broadcast parameters (weights, biases, layer dimensions) to all ranks
+
+// 3. Scatter input image rows to all ranks
+//    - Rank 0 calculates sendCounts and displacements for MPI_Scatterv
+//    - Each rank receives its `localIn` (local slice of input rows)
+std::vector<float> localIn(localCnt);
+MPI_Scatterv(input.data(), sendCnt.data(), sendDisp.data(), MPI_FLOAT,
+             localIn.data(), localCnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+int localH = localCnt / (W * C); // Height of local slice
+
+// 4. Halo Exchange for Conv1 (Conceptual - details vary based on padding (P) and filter size (F))
+const int pad1_rows = conv1.F / 2; // Number of halo rows needed from neighbors
+int slice1_elements = pad1_rows * W * C;
+std::vector<float> topHalo_recv(slice1_elements), botHalo_recv(slice1_elements);
+MPI_Request reqs; int req_count = 0;
+
+if (rank > 0) { // If not the first rank, receive from rank-1 and send to rank-1
+    MPI_Irecv(topHalo_recv.data(), slice1_elements, MPI_FLOAT, rank - 1, /*TAG_UP*/0, MPI_COMM_WORLD, &reqs[req_count++]);
+    MPI_Isend(localIn.data(), slice1_elements, MPI_FLOAT, rank - 1, /*TAG_DOWN*/1, MPI_COMM_WORLD, &reqs[req_count++]);
+}
+if (rank < size - 1) { // If not the last rank, receive from rank+1 and send to rank+1
+    MPI_Irecv(botHalo_recv.data(), slice1_elements, MPI_FLOAT, rank + 1, /*TAG_DOWN*/1, MPI_COMM_WORLD, &reqs[req_count++]);
+    MPI_Isend(localIn.data() + (localH - pad1_rows) * W * C, slice1_elements, MPI_FLOAT, rank + 1, /*TAG_UP*/0, MPI_COMM_WORLD, &reqs[req_count++]);
+}
+MPI_Waitall(req_count, reqs, MPI_STATUSES_IGNORE);
+
+// 5. Construct padded input using localIn, topHalo_recv, botHalo_recv
+//    Perform Conv1 -> ReLU1 -> Pool1 on this padded input
+//    (Code for layer calls similar to V1, but on `padded_input1`)
+//    Result in `pool1_intermediate_output`
+
+// 6. Asymmetric Trim of `pool1_intermediate_output`
+//    - Calculate how many rows at top/bottom of `pool1_intermediate_output`
+//      are invalid due to halo propagation through Conv1/Pool1.
+//    - Create `pool1_valid_output` by copying only the valid rows.
+//    - This step is crucial and complex.
+
+// 7. Halo Exchange for Conv2 (similar to step 4, using `pool1_valid_output`)
+//    Construct `padded_input2`
+
+// 8. Perform Conv2 -> ReLU2 -> Pool2 -> LRN2 on `padded_input2`
+//    Result in `lrn2_intermediate_output`
+
+// 9. Asymmetric Trim of `lrn2_intermediate_output` to get `localFinalOut`
+
+// 10. Gather `localFinalOut` from all ranks to rank 0 using MPI_Gatherv
+// ... MPI_Finalize ...
 ```
 
-**Note:** Shared resources (`data/`, `docs/`) are accessed from within versioned source code using relative paths. Adjust paths depending on whether accessing from `vX/` or `v2_mpi_only/X.Y/`.
+#### Key Files V2.2
+-   `v2_mpi_only/2.2_scatter_halo/src/main.cpp`
+-   `v2_mpi_only/2.2_scatter_halo/src/alexnet_mpi.cpp` (orchestrates layers for a given slice)
+-   `v2_mpi_only/2.2_scatter_halo/src/layers_mpi.cpp` (serial layer implementations, same as V1)
+-   `v2_mpi_only/2.2_scatter_halo/include/alexnet.hpp`, `layers.hpp`
 
-## 4. Project Version Implementation Plan (Blocks 1 & 2 Focus)
+#### Makefile Highlights V2.2
+Uses `mpicxx` as the compiler, which handles MPI library linking.
 
-The project progresses through five versions, focusing on Blocks 1&2 of AlexNet. V2 explored two distinct MPI strategies. The core goal is to demonstrate understanding of each parallelization paradigm using this subset.
+### V3: CUDA Only (Single GPU)
+
+#### Goal and Paradigm V3
+To accelerate the AlexNet inference by porting the computationally intensive layer operations to run on a single NVIDIA GPU using CUDA. This leverages the GPU's SIMT (Single Instruction, Multiple Threads) architecture for massive parallelism.
+
+#### Key Implementation Strategy & Code Examples V3
+The host (CPU) code manages overall control, data initialization, and memory transfers between host RAM and GPU device memory. CUDA kernels are written for each layer (Conv, ReLU, Pool, LRN) to execute on the GPU.
+
+**Host-Side Orchestration (`alexnet_cuda.cu`):**
+The `alexnetForwardPassCUDA` function handles:
+1.  Allocating GPU memory for input, output, intermediate feature maps, weights, and biases (`cudaMalloc`).
+2.  Copying input data and parameters from host to device (`cudaMemcpyHostToDevice`).
+3.  Launching a sequence of CUDA kernels for each layer.
+4.  Copying the final result from device back to host (`cudaMemcpyDeviceToHost`).
+5.  Freeing GPU memory (`cudaFree`).
+
+```cpp
+// In alexnet_cuda.cu (Illustrative)
+void alexnetForwardPassCUDA(
+    const std::vector<float>& input_host, /*...*/,
+    std::vector<float>& output_host)
+{
+    // ... Calculate dimensions (Hc1, Wc1, Hp1, etc.) ...
+    // ... Calculate buffer sizes (in_sz, c1_sz, p1_sz, etc.) ...
+
+    float *d_input, *d_c1out, *d_p1out, *d_c2out, *d_p2out, *d_l2out;
+    float *d_w1, *d_b1, *d_w2, *d_b2;
+
+    // Allocate all device memory
+    CUDA_CHECK(cudaMalloc(&d_input, in_sz * sizeof(float)));
+    // ... Malloc for d_c1out, d_p1out, ..., d_w1, d_b1, etc. ...
+
+    // Copy input data and parameters from host to device
+    CUDA_CHECK(cudaMemcpy(d_input, input_host.data(), /*...*/, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_w1, paramsConv1.weights.data(), /*...*/, cudaMemcpyHostToDevice));
+    // ... Memcpy for biases, Conv2 weights/biases ...
+
+    // --- Launch Kernels Sequentially ---
+    // Block 1
+    cudaConvLayer(d_c1out, d_input, d_w1, d_b1, H, W, C, K1, F1, S1, P1);
+    cudaReluLayer(d_c1out, c1_sz); // c1_sz is total elements in d_c1out
+    cudaMaxPoolLayer(d_p1out, d_c1out, Hc1, Wc1, C1, F_pool1, S_pool1);
+
+    // Block 2 (d_p1out becomes input for Conv2)
+    cudaConvLayer(d_c2out, d_p1out, d_w2, d_b2, Hp1, Wp1, C_conv2_input, K2, F2, S2, P2);
+    cudaReluLayer(d_c2out, c2_sz);
+    cudaMaxPoolLayer(d_p2out, d_c2out, Hc2, Wc2, C2, F_pool2, S_pool2);
+    cudaLRNLayer(d_l2out, d_p2out, Hp2, Wp2, C2_out_lrn, N_lrn, alpha, beta, k_lrn);
+
+    // Copy final result (d_l2out) from device to host
+    output_host.resize(l2_sz);
+    CUDA_CHECK(cudaMemcpy(output_host.data(), d_l2out, /*...*/, cudaMemcpyDeviceToHost));
+
+    // Free all device memory
+    CUDA_CHECK(cudaFree(d_input));
+    // ... Free for d_c1out, d_p1out, ..., d_w1, d_b1, etc. ...
+}
+```
+
+**CUDA Kernel Example - Convolution (`layers_cuda.cu`):**
+A basic convolution kernel where each GPU thread computes one element of the output feature map.
+```cuda
+// In layers_cuda.cu
+__global__ void convKernel(
+    float* out, const float* in, const float* weights, const float* biases,
+    int H, int W, int C_in,  // Input dimensions
+    int K_out, int F, int S, int P, // Filter params
+    int H_out, int W_out)           // Output dimensions
+{
+    int k = blockIdx.z * blockDim.z + threadIdx.z; // Output channel index
+    int y = blockIdx.y * blockDim.y + threadIdx.y; // Output row index
+    int x = blockIdx.x * blockDim.x + threadIdx.x; // Output col index
+
+    if (k >= K_out || y >= H_out || x >= W_out) return;
+
+    float sum = biases[k];
+    // Iterate over input channels, filter height, filter width
+    for (int c = 0; c < C_in; ++c) {
+        for (int fh = 0; fh < F; ++fh) {
+            for (int fw = 0; fw < F; ++fw) {
+                int input_y = y * S - P + fh;
+                int input_x = x * S - P + fw;
+                if (input_y >= 0 && input_y < H && input_x >= 0 && input_x < W) {
+                    // Input index: (input_y, input_x, c)
+                    // Weight index: (k, c, fh, fw)
+                    sum += in[/*input_idx*/] * weights[/*weight_idx*/];
+                }
+            }
+        }
+    }
+    // Output index: (y, x, k)
+    out[/*output_idx*/] = sum;
+}
+
+// Kernel Launcher (Host-side)
+void cudaConvLayer(/*...params...*/) {
+    // Calculate H_out, W_out
+    dim3 threadsPerBlock(16, 16, 1); // Example, adjust based on K_out
+    dim3 numBlocks((W_out + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                   (H_out + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                   (K_out + threadsPerBlock.z - 1) / threadsPerBlock.z);
+    convKernel<<<numBlocks, threadsPerBlock>>>(/*...args...*/);
+    CUDA_CHECK(cudaGetLastError()); // Always check for kernel launch errors
+}
+```
+*Note: The V3 CUDA kernels in the project were simpler 1D grid-stride loops, not 3D grids as shown above for illustration. The project's actual kernels map a 1D thread index to a 3D output coordinate.*
+
+#### Key Files V3
+-   `v3_cuda_only/src/main_cuda.cpp` (Host main)
+-   `v3_cuda_only/src/alexnet_cuda.cu` (Host-side GPU orchestration)
+-   `v3_cuda_only/src/layers_cuda.cu` (CUDA kernel implementations)
+-   `v3_cuda_only/include/alexnet.hpp`, `layers.hpp`
+
+#### Makefile Highlights V3
+Uses `nvcc` for compiling both `.cu` (device/host) and `.cpp` (host-only) files. Specifies GPU architecture flags (e.g., `-gencode arch=compute_50,code=sm_50` for the Quadro M1200). The `--cudadevrt=none` flag was found crucial to resolve linker issues on some setups.
+
+### V4: MPI+CUDA (Hybrid Host-Staging)
+
+#### Goal and Paradigm V4
+To combine MPI for inter-node/inter-process parallelism with CUDA for intra-node/intra-process GPU acceleration. This version uses a "host-staging" approach where data is explicitly moved between host memory (for MPI communication) and device memory (for CUDA computation).
+
+#### Key Implementation Strategy & Code Examples V4
+Each MPI rank is responsible for a slice of the input data and uses its assigned GPU.
+1.  **Initialization:** MPI setup, each rank sets its GPU. Parameters broadcast.
+2.  **Data Distribution:** Input data scattered row-wise to host buffers of each MPI rank.
+3.  **Host-Side Halo Exchange:** For Conv1, MPI ranks exchange halo regions using their host buffers (`MPI_Isend/Irecv/Waitall`).
+4.  **Padded Tile H$\rightarrow$D Copy:** Each rank copies its local data slice *plus the received halo regions* from its host buffer to its GPU's device memory.
+5.  **GPU Tile Computation:** A helper function, `alexnetTileForwardCUDA` (in `alexnet_mpi_cuda.cu`), is called. This function:
+    *   Takes the device pointer to the padded input tile.
+    *   Internally allocates device memory for intermediate feature maps and parameters (weights/biases for the tile).
+    *   Copies the global weights/biases (broadcast earlier to host) H$\rightarrow$D for the tile.
+    *   Launches the full sequence of CUDA kernels (Conv1 $\rightarrow$ ReLU1 ... $\rightarrow$ LRN2) on the GPU, operating entirely on the data within that padded tile.
+    *   Places the final output of LRN2 for that tile into a pre-allocated output device buffer.
+    *   Frees its internal temporary device buffers.
+6.  **Result Tile D$\rightarrow$H Copy:** The output tile from LRN2 is copied from device memory back to a host buffer.
+7.  **Host-Side Trimming:** The host CPU then trims rows from this received tile that correspond to the initial halo padding, ensuring only the valid, owned output portion remains. This requires careful index calculation considering the transformations by all layers.
+8.  **Result Aggregation:** The trimmed, valid local output slices are gathered by rank 0 using `MPI_Gatherv`.
+
+**Host-Side Orchestration (`main_mpi_cuda.cpp`):**
+```cpp
+// In main_mpi_cuda.cpp
+// ... MPI_Init, rank, size, GPU setup (cudaSetDevice) ...
+// ... Broadcast parameters (p1, p2 globally) ...
+// ... Scatter input rows to `myIn` (std::vector<float> on host) ...
+
+// Host Halo Exchange for Conv1 (Conceptual)
+// `myIn` is updated/expanded with halos from neighbors (similar to V2.2 logic)
+
+// Device Copy H->D
+float *d_in_padded_tile = nullptr;
+CUDA_CHECK(cudaMalloc(&d_in_padded_tile, myIn.size() * sizeof(float)));
+CUDA_CHECK(cudaMemcpy(d_in_padded_tile, myIn.data(), myIn.size() * sizeof(float), cudaMemcpyHostToDevice));
+
+// Calculate output dimensions for the *padded tile* (Hp2, Wp2, p2.K)
+// These are the dimensions of the output if the entire padded tile was processed.
+std::vector<float> host_tile_output_buffer( (size_t)Hp2_padded * Wp2_padded * p2.K );
+float* d_out_padded_tile = nullptr;
+CUDA_CHECK(cudaMalloc(&d_out_padded_tile, host_tile_output_buffer.size() * sizeof(float)));
+
+// GPU Tile Computation
+// `paddedH_for_gpu` is the height of `myIn` (local rows + halo rows)
+alexnetTileForwardCUDA(d_in_padded_tile, p1, p2, paddedH_for_gpu, W_original, C_original, d_out_padded_tile);
+
+// Device Copy D->H
+CUDA_CHECK(cudaMemcpy(host_tile_output_buffer.data(), d_out_padded_tile, /*...*/, cudaMemcpyDeviceToHost));
+
+// Host Trimming
+// `start_row_idx`, `num_valid_rows` are calculated based on rank, halo propagation through all layers.
+// `localFinalOutput` (std::vector<float>) gets the valid portion from `host_tile_output_buffer`.
+
+// Gather `localFinalOutput`
+// ... MPI_Gatherv ...
+// ... cudaFree(d_in_padded_tile), cudaFree(d_out_padded_tile) ...
+// ... MPI_Finalize ...
+```
+
+**GPU Tile Computation (`alexnet_mpi_cuda.cu`):**
+```cuda
+// In alexnet_mpi_cuda.cu
+void alexnetTileForwardCUDA(const float* d_input_tile_padded, // Padded input for this rank's slice
+                            const LayerParams& p1_global, const LayerParams& p2_global,
+                            int H_tile_padded, int W_original, int C_original, // Dimensions of d_input_tile_padded
+                            float* d_output_tile_final) // Pre-allocated output buffer for the tile
+{
+    // Calculate intermediate dimensions based on H_tile_padded, W_original, C_original
+    // ... Hc1, Wc1, Hp1, Wp1, C1_out ...
+    // ... Hc2, Wc2, Hp2, Wp2, C2_out ...
+
+    // Allocate temporary device buffers for intermediate layers (d_c1, d_p1, d_c2, d_p2)
+    // Allocate device buffers for weights/biases (dw1, db1, dw2, db2)
+    // Copy p1_global.weights, p1_global.biases, etc. to dw1, db1 etc. (H->D)
+
+    // Execute kernel sequence (similar to V3's alexnetForwardPassCUDA but on tile data)
+    cudaConvLayer(d_c1, d_input_tile_padded, dw1, db1, /*...*/);
+    cudaReluLayer(d_c1, /*...*/);
+    cudaMaxPoolLayer(d_p1, d_c1, /*...*/);
+    // ... Conv2, ReLU2, Pool2 ...
+    cudaLRNLayer(d_output_tile_final, d_p2, /*...*/); // Final result into d_output_tile_final
+
+    // Free temporary device buffers (dw1, db1, d_c1, d_p1, etc.)
+}
+```
+This host-staging approach simplifies some logic by having the GPU process a self-contained tile but introduces significant H$\leftrightarrow$D data movement for the full tile (including halos) and for parameters within `alexnetTileForwardCUDA` on each call, becoming a major bottleneck.
+
+#### Key Files V4
+-   `v4_mpi_cuda/src/main_mpi_cuda.cpp`
+-   `v4_mpi_cuda/src/alexnet_mpi_cuda.cu`
+-   `v4_mpi_cuda/src/layers_mpi_cuda.cu` (CUDA kernels, similar to V3)
+-   `v4_mpi_cuda/include/alexnet.hpp`, `layers.hpp`
+
+#### Makefile Highlights V4
+Uses `nvcc` as the main compiler, configured to use `mpicxx` as the host C++ compiler via the `-ccbin=mpicxx` flag. This allows `nvcc` to correctly handle both CUDA device code and host code that includes MPI headers and calls MPI functions. Similar GPU architecture flags and `--cudadevrt=none` are used.
 
 ---
-### Version 1: Serial CPU - COMPLETED
-*   **Directory:** `final_project/v1_serial/`
-*   **Goal:** Correct, sequential implementation on a single CPU core. Established functional baseline.
-*   **Implementation:** Pure C++, `std::vector`, direct loops for layers.
+
+## Compilation and Execution Summary
+
+-   **Compilation:** Navigate to the specific version directory (e.g., `final_project/v1_serial/`) and run `make clean && make`. This will produce an executable named `template`.
+-   **Execution:**
+    -   **V1 (Serial) & V3 (CUDA Only):** `./template`
+    -   **V2.1, V2.2 (MPI Only) & V4 (MPI+CUDA):** `mpirun -np <N> ./template`
+        -   Replace `<N>` with the desired number of MPI processes (e.g., 1, 2, 4).
+        -   For V4, each MPI process will attempt to use a GPU.
+        -   On a cluster, a hostfile (e.g., `mpirun -np 4 -hostfile myhosts ./template`) might be necessary.
+        -   If running locally with `<N>` greater than physical CPU cores, the `--oversubscribe` flag for `mpirun` might be needed.
 
 ---
-### Version 2: MPI Only (CPU) - COMPLETED
-*   **Goal:** Parallelize V1 logic across multiple CPU cores using MPI.
-*   **Directory Structure:** Contains subdirectories for implemented approaches.
 
-#### Approach 2.1: Broadcast All - IMPLEMENTED
-*   **Directory:** `final_project/v2_mpi_only/2.1_broadcast_all/`
-*   **Strategy:** Rank 0 `MPI_Bcast`s full input/parameters. All ranks compute the full V1 layer sequence locally. Each rank extracts its assigned slice from the *final* output only. Rank 0 gathers slices via `MPI_Gatherv`.
-*   **Outcome:** Simple implementation, validated basic MPI communication, but demonstrated poor scalability due to broadcast overhead and redundant computation. Serves as a contrast to more scalable methods.
+## Summary of Performance Findings and Conclusions
 
-#### Approach 2.2: Scatter + Halo - IMPLEMENTED
-*   **Directory:** `final_project/v2_mpi_only/2.2_scatter_halo/`
-*   **Strategy:** Rank 0 `MPI_Scatterv`s input rows. Ranks exchange halo regions using non-blocking `MPI_Isend`/`MPI_Irecv`/`MPI_Wait` before convolution layers (specifically V2 implementation handled halos before each block needing them). Parameters are broadcast. Each rank computes only on its local data (+halos). Rank 0 gathers final results via `MPI_Gatherv`. Required careful index management and handling of boundary conditions/padding, including asymmetric trimming after pooling.
-*   **Outcome:** More complex implementation, but demonstrated expected speedup and better scalability compared to 2.1. Represents a more realistic MPI parallelization pattern for convolutions.
+The project systematically evaluated four distinct parallelization strategies for AlexNet inference Blocks 1 & 2. Median-based runtimes were used for robust comparisons.
 
----
-### Version 3: CUDA Only (Single GPU) - COMPLETED
-*   **Directory:** `final_project/v3_cuda_only/`
-*   **Goal:** Port V1 compute logic (layers) to run on a single GPU using CUDA. Establish GPU baseline performance.
-*   **Implementation:** Basic CUDA kernels implemented for Conv, ReLU, Pool, LRN (e.g., 1D grid-stride loops). Host code manages `cudaMalloc`/`cudaMemcpy`/`cudaFree`, kernel launches. Basic `CUDA_CHECK` error handling used. Uses `nvcc` compiler.
-*   **Outcome:** Functional GPU implementation. Initial performance analysis indicates potential bottlenecks likely related to host-device transfer overhead or unoptimized kernels (requires profiling). Sample output values differ from V1/V2, needing investigation.
+### Performance Highlights
+*(Based on median runtimes from the project_final_scorecard_median_recalc_cv.md file)*
+-   **V1 (Serial CPU):** Established a baseline median runtime of **\SI{0.784}{s}** for NP=1.
+-   **V2.1 (MPI Broadcast):** Demonstrated poor scalability, with median runtime increasing from \SI{0.743}{s} (NP=1) to \SI{0.819}{s} (NP=4). The broadcast overhead was significant.
+-   **V2.2 (MPI Scatter+Halo):** Showed effective CPU-side parallelism. Median runtime improved from \SI{0.714}{s} (NP=1) to \SI{0.287}{s} (NP=4), achieving a median-based speedup of **2.49x** relative to its own NP=1 performance.
+-   **V3 (CUDA Only):** Provided the best single-instance (NP=1) performance with a median runtime of **\SI{0.488}{s}**, a 1.61x speedup over V1.
+-   **V4 (MPI+CUDA Host-Staging):**
+    -   Achieved a median NP=1 runtime of **\SI{0.429}{s}**, slightly faster than V3 NP=1, likely due to minor differences or measurement variance, but indicating the MPI overhead for a single process was manageable.
+    -   However, it scaled very poorly. Median runtime increased to \SI{0.401}{s} at NP=4, yielding a median-based speedup of only **1.07x** relative to its own NP=1. This was slower than V2.2 Scatter+Halo at NP=4.
+    -   The Coefficient of Variation (CV) for V4 at NP=1 was notably high (0.773), indicating significant runtime instability compared to other versions at NP=1 (e.g., V1 CV: 0.214; V3 CV: 0.353).
 
----
-### Version 4: MPI + CUDA (Hybrid) - IMPLEMENTED (Debugging)
-*   **Directory:** `final_project/v4_mpi_cuda/`
-*   **Goal:** Combine MPI parallelism (inter-rank, based on V2.2 Scatter+Halo logic) with CUDA parallelism (intra-rank GPU kernel execution from V3).
-*   **Implementation Status:** Code implemented but requires debugging.
-*   **Current Strategy Implemented:**
-    1.  MPI Setup: Ranks initialize, parameters broadcast, input data rows scattered via `MPI_Scatterv` to host buffers.
-    2.  Host Halo Exchange: Halo regions for Conv1 are exchanged between ranks using `MPI_Isend`/`Irecv`/`Wait` on host buffers.
-    3.  Host->Device Copy: The *padded* local input slice (local rows + received halos) is copied to the GPU (`cudaMemcpyHostToDevice`).
-    4.  GPU Computation: A single helper function (`alexnetTileForwardCUDA`) executes the *entire* V3 layer sequence (Conv1->...->LRN2) on the GPU for the padded tile. Intermediate layer results stay on the GPU within this function.
-    5.  Device->Host Copy: The final output tile (corresponding to the padded input) is copied back to the host (`cudaMemcpyDeviceToHost`).
-    6.  Host Trimming: Rows corresponding to the initial halo padding are trimmed from the host result buffer based on rank (simplified logic currently used).
-    7.  Result Aggregation: Trimmed local results are gathered via `MPI_Gatherv` to rank 0.
-    8.  GPU Affinity: `cudaSetDevice` is used based on MPI rank.
-    9.  Build: Uses `nvcc -ccbin=mpicxx`.
-*   **Issues:**
-    *   Output format mismatch prevents automatic result parsing by test script.
-    *   Runtime error occurs when running with 4 processes (exit code 134).
-    *   Correctness of trimming logic and overall numerical output needs verification.
-*   **Alternative Path:** An unused function (`alexnetForwardPassMPI_CUDA`) exists with more complex trimming logic, suggesting a potential refinement path.
+### Key Bottlenecks Identified
+-   **V2.1 (MPI Broadcast):** The broadcast operation itself.
+-   **V3 (CUDA Only):** While fast, performance is limited by PCIe H$\leftrightarrow$D transfers for the entire dataset and parameters, and the efficiency of the basic CUDA kernels.
+-   **V4 (MPI+CUDA Host-Staging):** This version was severely limited by:
+    1.  **Host-Staging Data Path:** MPI communication happening on host buffers, requiring explicit `cudaMemcpy` calls to move data (local slice + received halos) to the GPU, and results back to the host. These PCIe transfers are significant overheads.
+    2.  **Synchronization:** Implicit and explicit synchronization points between MPI calls, CUDA H$\leftrightarrow$D copies, and kernel launches can serialize parts of the execution.
+    3.  **CPU-Side Logic:** Trimming halo regions on the CPU after D$\leftrightarrow$H copy adds to host processing time.
+    4.  **Small Compute per GPU:** As NP increases, the data slice per GPU shrinks. For this problem size and implementation, the overhead of data movement and MPI coordination outweighed the benefits of distributing the (already fast on one GPU) V3 computation. GPUs likely experienced significant idle time.
+
+### Overall Lessons Learned
+1.  **Parallelization Paradigm Impact:** The choice of paradigm (MPI, CUDA, Hybrid) and its specific implementation strategy (e.g., broadcast vs. scatter+halo, host-staging vs. device-direct) drastically affects performance and scalability.
+2.  **Data Movement is Critical:** Minimizing data movement (across network for MPI, across PCIe for CUDA H$\leftrightarrow$D) is paramount in parallel systems. V4's performance highlighted this.
+3.  **Scalability Isn't Automatic:** Adding more resources (CPUs/GPUs) doesn't guarantee better performance if communication or other overheads become dominant (Amdahl's Law).
+4.  **Hybrid Complexity:** MPI+CUDA models are powerful but significantly more complex to implement, debug, and optimize correctly. Synchronization and data flow between host and device across multiple ranks require meticulous design.
+5.  **Profiling is Essential:** Performance results often indicate *what* is happening, but deep profiling (e.g., with Nsight Systems/Compute) is necessary to understand *why* and to guide targeted optimizations.
+6.  **Environment and Tooling Matter:** Linker issues and compiler flags (like `--cudadevrt=none`) underscore the importance of understanding the development environment.
+7.  **Problem Size Influence:** The performance characteristics observed are for a single image inference. Larger batch sizes might amortize some overheads differently.
 
 ---
-### Version 5: CUDA-Aware MPI (Optional Optimization) - PENDING
-*   **Directory:** `final_project/v5_cuda_aware_mpi/`
-*   **Goal:** Optimize V4 by using CUDA-aware MPI calls (passing GPU device pointers directly to MPI) to potentially reduce/eliminate host staging overhead *for MPI communication*.
-*   **Planned Actions:**
-    1.  Modify V4 code's `MPI_Scatterv`, `MPI_Isend`, `MPI_Irecv`, `MPI_Gatherv` calls to use *device* pointers.
-    2.  Remove explicit H<->D `cudaMemcpy` calls related solely to MPI staging (copies for padding/trimming might still be needed depending on approach).
-    3.  Verify cluster support (CUDA-aware OpenMPI build, HW support like GPUDirect RDMA). Configure environment if needed.
-    4.  Compare performance against V4 to quantify benefit/overhead.
-    5.  Build with `nvcc -ccbin=mpicxx`.
 
-## 5. Key Technologies
-- **MPI (Open MPI):** Distributed memory communication.
-- **CUDA (NVIDIA):** GPU programming (`nvcc`, runtime API, kernels).
-- **C++11/17:** Host code logic, `std::vector`.
-- **Make:** Build system (including `bear` and `clang-tidy` integration in V4).
-- **Bash:** Automation scripts (testing, packaging).
-
-## 6. Current Implementation Status & Performance Highlights
-
-*(Based on `run_final_project.sh` output on WSL2 dev machine - Times approximate, relative scaling is key)*
-
-| Version                | Procs | Shape     | First 5 Vals (Sample)          | Time       | Status | Notes                                      |
-| :--------------------- | :---- | :-------- | :----------------------------- | :--------- | :----- | :----------------------------------------- |
-| V1 Serial              | 1     | 13x13x256 | `0.0653 0.0579 0.0668 ...`     | ~667 ms    | ✔      | Baseline                                   |
-| V2 2.1-broadcast-all | 1     | 13x13x256 | `44.4152 42.4612 40.6967 ...` | ~679 ms    | ✔      |                                            |
-| V2 2.1-broadcast-all | 2     | 13x13x256 | `44.4152 42.4612 40.6967 ...` | ~809 ms    | ✔      | Scalability issue                          |
-| V2 2.1-broadcast-all | 4     | 13x13x256 | `44.4152 42.4612 40.6967 ...` | ~881 ms    | ✔      | Degrades                                   |
-| V2 2.2-scatter-halo  | 1     | 13x13x256 | `44.4152 42.4612 40.6967 ...` | ~561 ms    | ✔      |                                            |
-| V2 2.2-scatter-halo  | 2     | 13x13x256 | `29.2981 28.7552 28.2351 ...` | ~343 ms    | ✔      | Speedup                                    |
-| V2 2.2-scatter-halo  | 4     | 13x13x256 | `29.2981 28.7552 28.2351 ...` | ~281 ms    | ✔      | Good scaling                               |
-| V3 CUDA                | 1     | 13x13x256 | `29.2932 25.9153 23.3255 ...` | ~2349 ms   | ✔      | Slower than serial; needs profiling        |
-| V4 MPI+CUDA          | 1     | –         | –                              | –          | ⚠      | Runs; Output format mismatch               |
-| V4 MPI+CUDA          | 2     | –         | –                              | –          | ⚠      | Runs; Output format mismatch               |
-| V4 MPI+CUDA          | 4     | –         | –                              | –          | ⚠      | Fails (Exit 134 - MPI/Resource issue?)     |
-| V5 CUDA-Aware        | -     | -         | -                              | -          | (PENDING) |                                            |
-
-**Observations:**
-*   V2.2 shows expected MPI speedup. V2.1 shows expected overhead penalty.
-*   V3 (CUDA) is currently slower than V1 (Serial), indicating significant overhead or unoptimized kernels. Profiling needed.
-*   V4 runs for NP=1,2 but results aren't parsed due to output format differences. NP=4 fails during runtime. **V4 needs debugging.**
-*   Sample output values differ significantly between V1, V2.1, V2.2(np>=2), and V3, suggesting potential numerical differences or initialization variations that need investigation for correctness.
-
-## 7. Development Workflow for Versions
-1.  **Choose Version/Approach:** Select the target (e.g., Debug V4, Implement V5).
-2.  **Navigate:** `cd final_project/vX_suffix[/Y.Z_approach]`
-3.  **Implement/Debug:** Modify code in `src/` and `include/` based on the version's goal.
-4.  **Update Makefile:** Adjust compiler, flags, libraries, sources if needed.
-5.  **Build:** Run `make clean && make` (or `make compile_commands && make build_only` for V4+).
-6.  **Test:** Execute the compiled `template` executable using appropriate command (serial/MPI). Use `run_final_project.sh` for automated testing.
-7.  **Analyze/Profile:** Use timers (`MPI_Wtime`, CUDA Events), log files, debuggers (GDB, `cuda-gdb`), and profilers (Nsight Systems/Compute) to understand performance and correctness.
-8.  **Commit:** Save changes frequently using Git.
-
-## 8. Build & Test Instructions per Version
-
-**(Run commands from within the respective subdirectory)**
-
-*   **V1 (Serial):** `make clean && make && ./template`
-*   **V2 (MPI - Broadcast All):** `make clean && make && mpirun -np <N> ./template`
-*   **V2 (MPI - Scatter+Halo):** `make clean && make && mpirun -np <N> ./template`
-*   **V3 (CUDA Only):** `make clean && make && ./template`
-*   **V4 (MPI+CUDA):** `make clean && make && mpirun -np <N> ./template` (Use `make lint` for checks)
-*   **V5 (CUDA-Aware MPI):** `make clean && make && mpirun -np <N> ./template` *(Requires correctly configured CUDA-aware MPI environment)*
-
-*(Use `--oversubscribe` for `mpirun` if testing locally with N > physical cores. On cluster, use `-hostfile` and mapping options.)*
-*Use `../../scripts/run_final_project.sh` from the repo root to run all versions and generate the summary table.*
-
-## 9. Presentation Strategy
-
-The final project presentation will focus on the **journey of parallelization and performance analysis using the first two blocks of AlexNet** as the consistent workload. Key elements will include:
-*   **Demonstration:** Show V1-V4 (or highest working version) running. Explain V4 debugging status.
-*   **Methodology:** Explain the parallelization techniques applied in each distinct version (Serial, MPI Broadcast, MPI Scatter+Halo, CUDA, MPI+CUDA Host-Staging). Justify design choices (e.g., V4's full-tile-on-GPU approach).
-*   **Performance Analysis:** Present comprehensive results from the target cluster:
-    *   Wall-clock times for each version (using corrected V4 results).
-    *   Speedup and Efficiency plots relative to V1.
-    *   Scalability analysis (strong scaling) for MPI/Hybrid versions (V2.x, V4).
-    *   Timing breakdowns (computation vs communication vs H<->D transfer) using profiler data (especially for V3/V4) to identify bottlenecks.
-    *   Discuss observed numerical differences if they persist.
-*   **Conclusion:** Summarize key learnings, challenges overcome (including V4 debugging), and the effectiveness of each parallelization approach for this specific workload.
-
-## 10. Troubleshooting
-- Makefile Errors: Check TABs vs spaces, variable names, paths, dependencies. Run `make -d` for debug info. For V4, ensure `bear` is installed if using `make compile_commands`.
-- Include Errors: Verify include paths (`-I`), header guards (`#pragma once` or `#ifndef`).
-- Linker Errors: Check linked libraries (`-l`), library paths (`-L`), ensure all object files are included, check for symbol mismatches (`nm object.o`). For V4/V5, ensure MPI/CUDA libs are linked correctly via `nvcc -ccbin=mpicxx`.
-- MPI Runtime Errors: Check `mpirun` syntax (`-np`, `--oversubscribe`, hostfile). Check for deadlocks (mismatched send/recv tags, collective calls). Check buffer sizes/counts. Use `MPI_Abort` with error codes. Examine log files from test script.
-- CUDA Errors: Use `CUDA_CHECK` macro around *all* runtime API calls and after kernel launches (`cudaGetLastError`). Use `cuda-memcheck` or `compute-sanitizer` to detect memory errors. Check kernel launch configurations (grid/block dims). Ensure correct device is set (`cudaSetDevice`).
-- Path Errors: Double-check relative paths (`../`, `./`) used for includes or data access.
-- V4 Runtime Error (NP=4): Examine `final_project/logs/final_project_v4_np4.log` first. Re-run with `-g`, potentially under `gdb --args mpirun -np 4 ./template`, or use `cuda-memcheck mpirun -np 4 ./template`. Check resource limits (memory, GPU access per node).
-
-## 11. Future Directions & Extensions
-- **Debug & Validate V4:** Fix output format, resolve NP=4 runtime error, verify numerical correctness and trimming logic against V1/V3.
-- **Profile V3 & V4:** Use Nsight Systems/Compute to understand V3 slowness and identify V4 bottlenecks (likely H<->D copies, host halo exchange).
-- **Implement V5:** If V4 is stable and cluster supports it, implement CUDA-aware MPI optimization and benchmark against V4.
-- **Performance Optimization:** Apply techniques based on profiling (e.g., async overlap in V4/V5, kernel tuning).
-- **Full AlexNet Implementation:** *If time permits after V1-V5*, extend the most performant version to include remaining layers.
-- **Explore Alternative V4 Strategy:** Consider refactoring V4 to use the more complex logic in the unused `alexnetForwardPassMPI_CUDA` function for potentially finer-grained control or different performance characteristics.
-
-## 12. References & Resources
-- MPI Forum: [mpi-forum.org](https://mpi-forum.org/)
-- NVIDIA CUDA Documentation: [docs.nvidia.com/cuda/](https://docs.nvidia.com/cuda/)
-- Programming Massively Parallel Processors (4th Ed.) Textbook & Companion Site
-- Open MPI Documentation: [open-mpi.org](https://www.open-mpi.org/)
-- LLNL HPC Tutorials: [hpc-tutorials.llnl.gov](https://hpc-tutorials.llnl.gov/)
-- `final_project/RESEARCH.md` for detailed analysis and specific paper references.
+## Future Work Highlights
+Based on the project findings, key areas for future work include:
+1.  **V5: CUDA-Aware MPI:** Implement V5 to allow MPI calls to operate directly on GPU device pointers. This is the most direct way to address V4's host-staging bottleneck by potentially eliminating H$\leftrightarrow$D copies for halo exchanges.
+2.  **Detailed Profiling:** Use NVIDIA Nsight Systems and Compute to thoroughly profile V3 and V4 (and a future V5) on the target cluster to pinpoint exact locations of bottlenecks (e.g., H$\leftrightarrow$D transfer times, kernel execution times, MPI wait times).
+3.  **Asynchronous Operations:** Explore asynchronous techniques (CUDA streams for compute/copy overlap, non-blocking MPI calls, pinned host memory) to improve V4/V5 performance by hiding latencies.
+4.  **Kernel Optimizations:** Refine CUDA kernels in V3/V4/V5 using techniques like shared memory tiling for data reuse, ensuring coalesced global memory access, and optimizing for warp efficiency.
+5.  **Investigate Numerical Differences:** Conduct a more thorough layer-by-layer comparison between CPU and GPU outputs to pinpoint sources of minor numerical variations.
