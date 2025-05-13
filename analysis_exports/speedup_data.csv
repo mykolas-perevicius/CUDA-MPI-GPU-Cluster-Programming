@@ -1,0 +1,27 @@
+version,np,S
+v1_np1_20250506_142151,1,1.0
+V2 2.2-scatter-halo,4,2.725080006013875
+V4 MPI+CUDA,4,0.7311156147693341
+v3_np1_20250506_142151,1,1.0
+v3_np1_20250506_160835,1,1.0
+v2_2.1_broadcast_all_np1.log,1,1.0
+v4_np1,1,1.0
+v3_np1,1,1.0
+v2_2.1_broadcast_all_np1_20250506_160835.log,1,1.0
+V2 2.1-broadcast-all,1,1.0
+v4_np1_20250506_142151,1,1.0
+v2_2.1_broadcast_all_np1_20250506_142151.log,1,1.0
+v4_np1_20250506_160835,1,1.0
+V2 2.2-scatter-halo,1,1.0
+V4 MPI+CUDA,1,1.0
+v2_2.2_scatter_halo_np1_20250506_160835.log,1,1.0
+V2 2.2-scatter-halo,2,1.6076965477042773
+V4 MPI+CUDA,2,1.0108881286236189
+v2_2.2_scatter_halo_np1.log,1,1.0
+V2 2.1-broadcast-all,4,0.8852814016512258
+v1_np1_20250506_160835,1,1.0
+V1 Serial,1,1.0
+V2 2.1-broadcast-all,2,0.9564285461384058
+v1_np1,1,1.0
+V3 CUDA,1,1.0
+v2_2.2_scatter_halo_np1_20250506_142151.log,1,1.0

@@ -1,0 +1,25 @@
+EFFECTIVE_GPU_ARCH_FLAGS is [-gencode arch=compute_86,code=sm_86 -gencode arch=compute_86,code=compute_86]
+HOST_CUDA_ARCH_FLAGS is [-gencode arch=compute_86,code=sm_86 -gencode arch=compute_86,code=compute_86]
+Compiling .cpp file: src/main_mpi_cuda.cpp
+Command: nvcc -std=c++17 -O3 -ccbin=mpicxx -Xcompiler=-Wall -Wextra -fno-diagnostics-show-caret -fno-diagnostics-show-option -fmessage-length=0 -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -gencode arch=compute_86,code=sm_86 -gencode arch=compute_86,code=compute_86 -cudart=shared --cudadevrt=none -Xcudafe --diag_suppress=186 -I./include -c  src/main_mpi_cuda.cpp -o src/main_mpi_cuda.o
+In file included from /usr/lib/x86_64-linux-gnu/openmpi/include/openmpi/ompi/mpi/cxx/mpicxx.h:277,
+                 from /usr/lib/x86_64-linux-gnu/openmpi/include/mpi.h:2911,
+                 from src/main_mpi_cuda.cpp:6:
+/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi/ompi/mpi/cxx/op_inln.h: In member function ‘virtual void MPI::Op::Init(void (*)(const void*, void*, int, const MPI::Datatype&), bool)’:
+/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi/ompi/mpi/cxx/op_inln.h:121:25: warning: cast between incompatible function types from ‘void (*)(void*, void*, int*, ompi_datatype_t**, void (*)(void*, void*, int*, ompi_datatype_t**))’ to ‘void (*)(void*, void*, int*, ompi_datatype_t**)’
+/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi/ompi/mpi/cxx/op_inln.h:123:38: warning: cast between incompatible function types from ‘void (*)(const void*, void*, int, const MPI::Datatype&)’ to ‘void (*)(void*, void*, int*, ompi_datatype_t**)’
+Compiling .cu file: src/alexnet_mpi_cuda.cu
+Command: nvcc -std=c++17 -O3 -ccbin=mpicxx -Xcompiler=-Wall -Wextra -fno-diagnostics-show-caret -fno-diagnostics-show-option -fmessage-length=0 -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -gencode arch=compute_86,code=sm_86 -gencode arch=compute_86,code=compute_86 -cudart=shared --cudadevrt=none -Xcudafe --diag_suppress=186 -I./include -dc src/alexnet_mpi_cuda.cu -o src/alexnet_mpi_cuda.o
+/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi/ompi/mpi/cxx/op_inln.h: In member function ‘virtual void MPI::Op::Init(void (*)(const void*, void*, int, const MPI::Datatype&), bool)’:
+/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi/ompi/mpi/cxx/op_inln.h:121:21: warning: cast between incompatible function types from ‘void (*)(void*, void*, int*, ompi_datatype_t**, void (*)(void*, void*, int*, ompi_datatype_t**))’ to ‘void (*)(void*, void*, int*, ompi_datatype_t**)’
+/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi/ompi/mpi/cxx/op_inln.h:123:34: warning: cast between incompatible function types from ‘void (*)(const void*, void*, int, const MPI::Datatype&)’ to ‘void (*)(void*, void*, int*, ompi_datatype_t**)’
+src/alexnet_mpi_cuda.cu: In function ‘void alexnetForwardPassMPI_CUDA(const std::vector<float>&, int, int, int, int, const LayerParams&, const LayerParams&, std::vector<float>&, int, int)’:
+src/alexnet_mpi_cuda.cu:102:157: warning: comparison of unsigned expression in ‘>= 0’ is always true
+src/alexnet_mpi_cuda.cu:103:105: warning: comparison of unsigned expression in ‘>= 0’ is always true
+Compiling .cu file: src/layers_mpi_cuda.cu
+Command: nvcc -std=c++17 -O3 -ccbin=mpicxx -Xcompiler=-Wall -Wextra -fno-diagnostics-show-caret -fno-diagnostics-show-option -fmessage-length=0 -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -gencode arch=compute_86,code=sm_86 -gencode arch=compute_86,code=compute_86 -cudart=shared --cudadevrt=none -Xcudafe --diag_suppress=186 -I./include -dc src/layers_mpi_cuda.cu -o src/layers_mpi_cuda.o
+/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi/ompi/mpi/cxx/op_inln.h: In member function ‘virtual void MPI::Op::Init(void (*)(const void*, void*, int, const MPI::Datatype&), bool)’:
+/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi/ompi/mpi/cxx/op_inln.h:121:21: warning: cast between incompatible function types from ‘void (*)(void*, void*, int*, ompi_datatype_t**, void (*)(void*, void*, int*, ompi_datatype_t**))’ to ‘void (*)(void*, void*, int*, ompi_datatype_t**)’
+/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi/ompi/mpi/cxx/op_inln.h:123:34: warning: cast between incompatible function types from ‘void (*)(const void*, void*, int, const MPI::Datatype&)’ to ‘void (*)(void*, void*, int*, ompi_datatype_t**)’
+Linking target: template
+Command: nvcc -std=c++17 -O3 -ccbin=mpicxx -Xcompiler=-Wall -Wextra -fno-diagnostics-show-caret -fno-diagnostics-show-option -fmessage-length=0 -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -gencode arch=compute_86,code=sm_86 -gencode arch=compute_86,code=compute_86 -cudart=shared --cudadevrt=none -Xcudafe --diag_suppress=186 src/main_mpi_cuda.o src/alexnet_mpi_cuda.o src/layers_mpi_cuda.o -o template -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi_cxx -lmpi -lm
