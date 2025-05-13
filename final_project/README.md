@@ -185,7 +185,8 @@ void serialConvLayer(
             }
         }
     }
-}```
+}
+```
 
 #### Key Files V1
 -   `v1_serial/src/main.cpp`
