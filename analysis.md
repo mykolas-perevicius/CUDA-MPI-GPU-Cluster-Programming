@@ -45,6 +45,9 @@ HASH_CHUNK = 1 << 16  # 64 KiB block size for streaming SHA-1
 print(f"DuckDB Warehouse will be created/used at: {WAREHOUSE.resolve()}")
 ```
 
+    DuckDB Warehouse will be created/used at: /home/myko/CS485/CUDA-MPI-GPU-Cluster-Programming/.warehouse/cluster_logs.duckdb
+
+
 
 ```python
 # In[2]:
@@ -149,6 +152,9 @@ def _normalise_summary_df(df: pd.DataFrame, src: str) -> pd.DataFrame:
 print("Helper and canonicalization functions defined.")
 ```
 
+    Helper and canonicalization functions defined.
+
+
 
 ```python
 # In[3]:
@@ -236,6 +242,9 @@ SELECT version, np, S/np AS E FROM speedup WHERE np > 0;
 
 print("Database schemas and view definitions ready (includes DROP statements for rebuilds).")
 ```
+
+    Database schemas and view definitions ready (includes DROP statements for rebuilds).
+
 
 
 ```python
@@ -412,6 +421,9 @@ def ingest_data(root: Path, rebuild: bool = False):
 print("Ingestion function 'ingest_data' defined.")
 ```
 
+    Ingestion function 'ingest_data' defined.
+
+
 
 ```python
 # In[5]:
@@ -420,6 +432,16 @@ print("Ingestion function 'ingest_data' defined.")
 project_root = Path(".") 
 ingest_data(root=project_root / "final_project", rebuild=True) 
 ```
+
+    • Wiped existing warehouse
+    Starting ingestion from root: 
+    /home/myko/CS485/CUDA-MPI-GPU-Cluster-Programming/final_project
+    • Indexed/Updated 365 files in file_index.
+    • 144 summary rows ingested
+    • 131 run_log rows ingested
+    • 52 source files stats ingested/updated
+    ✓ Ingest complete. Derived views (re)created.
+
 
 
 ```python
@@ -476,6 +498,571 @@ if source_file_count is not None:
     display(source_file_count)
 ```
 
+    
+    --- Database Objects (Tables and Views) ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>object_name</th>
+      <th>type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>file_index</td>
+      <td>BASE TABLE</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>run_logs</td>
+      <td>BASE TABLE</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>source_stats</td>
+      <td>BASE TABLE</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>summary_runs</td>
+      <td>BASE TABLE</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>best_runs</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>best_runs</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>duckdb_columns</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>duckdb_columns</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>duckdb_columns</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>duckdb_constraints</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>duckdb_constraints</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>duckdb_constraints</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>duckdb_databases</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>duckdb_databases</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>duckdb_databases</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>duckdb_indexes</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>duckdb_indexes</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>duckdb_indexes</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>duckdb_logs</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>duckdb_logs</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>duckdb_logs</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>duckdb_schemas</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>duckdb_schemas</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>duckdb_schemas</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>duckdb_tables</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>duckdb_tables</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>duckdb_tables</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>duckdb_types</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>duckdb_types</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>duckdb_types</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>duckdb_views</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>duckdb_views</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>duckdb_views</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>efficiency</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>efficiency</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>perf_runs</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>perf_runs</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>pragma_database_list</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>pragma_database_list</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>pragma_database_list</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>run_stats</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>run_stats</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>speedup</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>speedup</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>sqlite_master</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>sqlite_master</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>sqlite_master</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>sqlite_schema</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>sqlite_schema</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>sqlite_schema</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>sqlite_temp_master</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>sqlite_temp_master</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>sqlite_temp_master</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>sqlite_temp_schema</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>sqlite_temp_schema</td>
+      <td>VIEW</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>sqlite_temp_schema</td>
+      <td>VIEW</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+    
+    --- Schema of 'best_runs' view ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>column_name</th>
+      <th>column_type</th>
+      <th>null</th>
+      <th>key</th>
+      <th>default</th>
+      <th>extra</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>version</td>
+      <td>VARCHAR</td>
+      <td>YES</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>np</td>
+      <td>INTEGER</td>
+      <td>YES</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>best_s</td>
+      <td>DOUBLE</td>
+      <td>YES</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+    
+    --- Sample data from 'best_runs' (Grouped by canonical version, NP) ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>version</th>
+      <th>np</th>
+      <th>best_s</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V1 Serial</td>
+      <td>1</td>
+      <td>0.601000</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>1</td>
+      <td>0.702338</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>2</td>
+      <td>0.734334</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>4</td>
+      <td>0.793350</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>1</td>
+      <td>0.507508</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>2</td>
+      <td>0.315674</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>4</td>
+      <td>0.186236</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>V3 CUDA</td>
+      <td>1</td>
+      <td>0.194456</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>V4 MPI+CUDA</td>
+      <td>1</td>
+      <td>0.182901</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>V4 MPI+CUDA</td>
+      <td>2</td>
+      <td>0.180931</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+    
+    --- Perf run counts per canonical version ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>version</th>
+      <th>count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V1 Serial</td>
+      <td>14</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>37</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>38</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>V3 CUDA</td>
+      <td>11</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>V4 MPI+CUDA</td>
+      <td>31</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+    
+    --- Total Source Files Analyzed ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>num_source_files</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>52</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
 
 ```python
 # In[7]:
@@ -497,6 +1084,142 @@ else:
     print("No run statistics to display. Ensure 'perf_runs' has data for canonical versions.")
 ```
 
+    
+    --- Run Statistics (Time in seconds, for Canonical Versions) ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>version</th>
+      <th>np</th>
+      <th>n</th>
+      <th>mean_s</th>
+      <th>sd_s</th>
+      <th>ci95_s</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V1 Serial</td>
+      <td>1</td>
+      <td>14</td>
+      <td>0.8238</td>
+      <td>0.1766</td>
+      <td>0.0925</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>1</td>
+      <td>13</td>
+      <td>0.9751</td>
+      <td>0.4074</td>
+      <td>0.2215</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>2</td>
+      <td>13</td>
+      <td>0.9615</td>
+      <td>0.4409</td>
+      <td>0.2397</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>4</td>
+      <td>11</td>
+      <td>1.0655</td>
+      <td>0.4642</td>
+      <td>0.2743</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>1</td>
+      <td>13</td>
+      <td>0.7781</td>
+      <td>0.2074</td>
+      <td>0.1128</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>2</td>
+      <td>13</td>
+      <td>0.5392</td>
+      <td>0.2659</td>
+      <td>0.1445</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>4</td>
+      <td>12</td>
+      <td>0.3351</td>
+      <td>0.1411</td>
+      <td>0.0798</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>V3 CUDA</td>
+      <td>1</td>
+      <td>11</td>
+      <td>0.4348</td>
+      <td>0.1535</td>
+      <td>0.0907</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>V4 MPI+CUDA</td>
+      <td>1</td>
+      <td>10</td>
+      <td>0.5317</td>
+      <td>0.4111</td>
+      <td>0.2548</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>V4 MPI+CUDA</td>
+      <td>2</td>
+      <td>12</td>
+      <td>0.5016</td>
+      <td>0.2604</td>
+      <td>0.1473</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>V4 MPI+CUDA</td>
+      <td>4</td>
+      <td>9</td>
+      <td>0.4071</td>
+      <td>0.1045</td>
+      <td>0.0683</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
 
 ```python
 # In[8]:
@@ -516,6 +1239,206 @@ if efficiency_df is not None and not efficiency_df.empty:
 else:
     print("No efficiency data. Ensure 'speedup' view has data for canonical versions.")
 ```
+
+    
+    --- Speedup (S = T_NP1 / T_NPn, relative to canonical version's NP=1) ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>version</th>
+      <th>np</th>
+      <th>S</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V1 Serial</td>
+      <td>1</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>1</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>2</td>
+      <td>0.956</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>4</td>
+      <td>0.885</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>1</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>2</td>
+      <td>1.608</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>4</td>
+      <td>2.725</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>V3 CUDA</td>
+      <td>1</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>V4 MPI+CUDA</td>
+      <td>1</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>V4 MPI+CUDA</td>
+      <td>2</td>
+      <td>1.011</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>V4 MPI+CUDA</td>
+      <td>4</td>
+      <td>0.731</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+    
+    --- Efficiency (E = S / np, relative to canonical version's NP=1) ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>version</th>
+      <th>np</th>
+      <th>E</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V1 Serial</td>
+      <td>1</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>1</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>2</td>
+      <td>0.478</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>4</td>
+      <td>0.221</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>1</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>2</td>
+      <td>0.804</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>4</td>
+      <td>0.681</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>V3 CUDA</td>
+      <td>1</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>V4 MPI+CUDA</td>
+      <td>1</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>V4 MPI+CUDA</td>
+      <td>2</td>
+      <td>0.505</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>V4 MPI+CUDA</td>
+      <td>4</td>
+      <td>0.183</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
 
 
 ```python
@@ -566,6 +1489,9 @@ def export_table(table_name: str, out_file: Path):
 print("Data export function 'export_table' defined.")
 ```
 
+    Data export function 'export_table' defined.
+
+
 
 ```python
 # In[10]:
@@ -584,6 +1510,17 @@ export_table("source_stats", output_dir / "project_source_code_stats.md")
 
 print(f"\nExports completed to directory: {output_dir.resolve()}")
 ```
+
+    ✓ Table 'best_runs' exported successfully to analysis_exports/project_best_runs.md
+    ✓ Table 'run_stats' exported successfully to analysis_exports/project_run_statistics.csv
+    ✓ Table 'perf_runs' exported successfully to analysis_exports/project_all_perf_runs.parquet
+    ✓ Table 'speedup' exported successfully to analysis_exports/project_speedup_data.csv
+    ✓ Table 'efficiency' exported successfully to analysis_exports/project_efficiency_data.csv
+    ✓ Table 'file_index' exported successfully to analysis_exports/project_indexed_files.parquet
+    ✓ Table 'source_stats' exported successfully to analysis_exports/project_source_code_stats.md
+    
+    Exports completed to directory: /home/myko/CS485/CUDA-MPI-GPU-Cluster-Programming/analysis_exports
+
 
 
 ```python
@@ -641,6 +1578,9 @@ def generate_runtime_plot(out_file: Path = Path("analysis_plots/runtimes_plot.pn
 print("Runtime plotting function 'generate_runtime_plot' defined.")
 ```
 
+    Runtime plotting function 'generate_runtime_plot' defined.
+
+
 
 ```python
 # In[12]:
@@ -648,6 +1588,15 @@ print("Runtime plotting function 'generate_runtime_plot' defined.")
 
 generate_runtime_plot(out_file=Path("analysis_plots/project_performance_runtimes.png"))
 ```
+
+    ✓ Runtime plot saved to analysis_plots/project_performance_runtimes.png
+
+
+
+    
+![png](analysis_files/analysis_11_1.png)
+    
+
 
 
 ```python
@@ -705,6 +1654,9 @@ def generate_speedup_plot(out_file: Path = Path("analysis_plots/speedup_curve_pl
 print("Speedup plotting function 'generate_speedup_plot' defined.")
 ```
 
+    Speedup plotting function 'generate_speedup_plot' defined.
+
+
 
 ```python
 # In[14]:
@@ -712,6 +1664,15 @@ print("Speedup plotting function 'generate_speedup_plot' defined.")
 
 generate_speedup_plot(out_file=Path("analysis_plots/project_performance_speedup.png"))
 ```
+
+    ✓ Speedup curve plot saved to analysis_plots/project_performance_speedup.png
+
+
+
+    
+![png](analysis_files/analysis_13_1.png)
+    
+
 
 
 ```python
@@ -793,6 +1754,9 @@ def generate_efficiency_plot(out_file: Path = Path("analysis_plots/efficiency_ba
 print("Efficiency plotting function 'generate_efficiency_plot' defined.")
 ```
 
+    Efficiency plotting function 'generate_efficiency_plot' defined.
+
+
 
 ```python
 # In[16]:
@@ -800,6 +1764,15 @@ print("Efficiency plotting function 'generate_efficiency_plot' defined.")
 
 generate_efficiency_plot(out_file=Path("analysis_plots/project_performance_efficiency.png"))
 ```
+
+    ✓ Efficiency plot saved to analysis_plots/project_performance_efficiency.png
+
+
+
+    
+![png](analysis_files/analysis_15_1.png)
+    
+
 
 
 ```python
@@ -872,6 +1845,231 @@ else:
 #    print(f"Statistic: {ttest_result.statistic:.4f}, P-value: {ttest_result.pvalue:.4f}")
 ```
 
+    
+    --- Key Performance Metrics from 'run_stats' (Canonical Versions) ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>version</th>
+      <th>np</th>
+      <th>n</th>
+      <th>mean_runtime_s</th>
+      <th>std_dev_s</th>
+      <th>ci95_s</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V1 Serial</td>
+      <td>1</td>
+      <td>14</td>
+      <td>0.8238</td>
+      <td>0.1766</td>
+      <td>0.0925</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>1</td>
+      <td>13</td>
+      <td>0.7781</td>
+      <td>0.2074</td>
+      <td>0.1128</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>2</td>
+      <td>13</td>
+      <td>0.5392</td>
+      <td>0.2659</td>
+      <td>0.1445</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>4</td>
+      <td>12</td>
+      <td>0.3351</td>
+      <td>0.1411</td>
+      <td>0.0798</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>V3 CUDA</td>
+      <td>1</td>
+      <td>11</td>
+      <td>0.4348</td>
+      <td>0.1535</td>
+      <td>0.0907</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>V4 MPI+CUDA</td>
+      <td>1</td>
+      <td>10</td>
+      <td>0.5317</td>
+      <td>0.4111</td>
+      <td>0.2548</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>V4 MPI+CUDA</td>
+      <td>2</td>
+      <td>12</td>
+      <td>0.5016</td>
+      <td>0.2604</td>
+      <td>0.1473</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>V4 MPI+CUDA</td>
+      <td>4</td>
+      <td>9</td>
+      <td>0.4071</td>
+      <td>0.1045</td>
+      <td>0.0683</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+    
+    --- Fastest Single Process Runs (NP=1 from 'best_runs') ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>version</th>
+      <th>np</th>
+      <th>fastest_runtime_s</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V4 MPI+CUDA</td>
+      <td>1</td>
+      <td>0.1829</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V3 CUDA</td>
+      <td>1</td>
+      <td>0.1945</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>1</td>
+      <td>0.5075</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>V1 Serial</td>
+      <td>1</td>
+      <td>0.6010</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>1</td>
+      <td>0.7023</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+    
+    --- Performance at Max Scaled NP (e.g., NP=4, from 'best_runs') ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>version</th>
+      <th>np</th>
+      <th>fastest_runtime_s</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>4</td>
+      <td>0.1862</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V4 MPI+CUDA</td>
+      <td>4</td>
+      <td>0.2502</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V2.1 BroadcastAll</td>
+      <td>4</td>
+      <td>0.7934</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
 
 ```python
 # In[18]:
@@ -896,360 +2094,68 @@ generate_efficiency_plot(out_file=visuals_output_dir / "project_efficiency_vs_np
 print("\n--- All visual exports attempted. Check console for success/error messages. ---")
 ```
 
-
-```python
-# In[19]:
-# Cell 19: Advanced Data Integration, Statistical Visualization & Synthesis
-
-import seaborn as sns # For potentially prettier plots
-import matplotlib.colors # For color mapping
-from matplotlib.ticker import MaxNLocator, FuncFormatter # For ensuring integer ticks and custom formatting
-from scipy.stats import pearsonr # For correlation
-
-# Apply a nicer default style if seaborn is available
-if 'seaborn' in sys.modules:
-    sns.set_theme(style="whitegrid", palette="muted")
-    print("[INFO] Seaborn theme applied for enhanced plot aesthetics.")
-
-visuals_output_dir = Path("analysis_visuals_final") 
-visuals_output_dir.mkdir(parents=True, exist_ok=True)
-print(f"[INFO] All plots for this cell will be saved to: {visuals_output_dir.resolve()}")
-
-# --- Helper to format y-axis ticks for log scale if used ---
-def log_tick_formatter(val, pos=None):
-    return f"{val:.2g}" # Format to general with 2 significant figures
-
-# --- 1. Aggregate Lines of Code (LOC) for Canonical Versions ---
-print("\n--- Aggregating Lines of Code (LOC) for Canonical Versions ---")
-version_loc_map = {
-    "V1 Serial": ["v1_serial/src/", "v1_serial/include/"],
-    "V2.1 BroadcastAll": ["v2_mpi_only/2.1_broadcast_all/src/", "v2_mpi_only/2.1_broadcast_all/include/"],
-    "V2.2 ScatterHalo": ["v2_mpi_only/2.2_scatter_halo/src/", "v2_mpi_only/2.2_scatter_halo/include/"],
-    "V3 CUDA": ["v3_cuda_only/src/", "v3_cuda_only/include/"],
-    "V4 MPI+CUDA": ["v4_mpi_cuda/src/", "v4_mpi_cuda/include/"],
-    # "V5 MPI+CUDA-Aware": ["v5_cuda_aware_mpi/src/", "v5_cuda_aware_mpi/include/"] # Example
-}
-version_loc_data = []
-for version_name, dir_prefixes in version_loc_map.items():
-    like_clauses = [f"relpath LIKE '{prefix}%'" for prefix in dir_prefixes]
-    dir_filter = " OR ".join(like_clauses)
+    All plots will be saved to: /home/myko/CS485/CUDA-MPI-GPU-Cluster-Programming/analysis_visuals_final
     
-    # DuckDB's extension function is simpler: extension(relpath)
-    # However, to be safe with paths that might not have extensions or multiple dots,
-    # a regex or robust split is better if extension() isn't available/suitable.
-    # For DuckDB 0.7.0+, `regexp_extract(relpath, '\.([a-zA-Z0-9]+)$')` could work for extension.
-    # Simpler approach using LIKE for common extensions:
-    ext_filter = "OR ".join([f"LOWER(relpath) LIKE '%.{ext}'" for ext in ['cpp', 'cu', 'hpp', 'h', 'c', 'inl']])
-
-    query = f"""
-    SELECT '{version_name}' as version, SUM(loc) as total_loc
-    FROM source_stats
-    WHERE ({dir_filter}) AND ({ext_filter});
-    """
-    loc_df = execute_query(query)
-    if loc_df is not None and not loc_df.empty and pd.notna(loc_df.iloc[0]['total_loc']):
-        version_loc_data.append({'version': version_name, 'total_loc': int(loc_df.iloc[0]['total_loc'])})
-    else:
-        version_loc_data.append({'version': version_name, 'total_loc': 0}) # Assume 0 if no files match
-
-df_loc = pd.DataFrame(version_loc_data)
-if not df_loc[df_loc['total_loc'] > 0].empty:
-    print("Aggregated LOC for core logic (src/, include/ relevant files):")
-    display(df_loc[df_loc['total_loc'] > 0])
-else:
-    print("Could not aggregate LOC for any version. Check patterns or source_stats data.")
-
-# --- 2. Plot: Best NP=1 Performance vs. LOC (with Correlation) ---
-print("\n--- Plotting: Best NP=1 Performance vs. Lines of Code ---")
-df_loc_filtered = df_loc[df_loc['total_loc'] > 0] # Use only versions with LOC > 0
-if not df_loc_filtered.empty:
-    df_best_np1 = execute_query("SELECT version, best_s FROM best_runs WHERE np = 1 AND best_s IS NOT NULL")
-    if df_best_np1 is not None and not df_best_np1.empty:
-        df_perf_vs_loc = pd.merge(df_best_np1, df_loc_filtered, on="version")
-        
-        if not df_perf_vs_loc.empty and len(df_perf_vs_loc) > 1: # Need at least 2 points for correlation
-            plt.figure(figsize=(11, 7)) # Increased figure size
-            
-            # Calculate Pearson correlation
-            # Drop NA before correlation if any best_s or total_loc could be NA
-            df_corr = df_perf_vs_loc[['total_loc', 'best_s']].dropna()
-            corr_val, p_val = pd.NA, pd.NA
-            if len(df_corr) > 1:
-                 corr_val, p_val = pearsonr(df_corr["total_loc"], df_corr["best_s"])
-                 corr_text = f'Pearson R: {corr_val:.2f} (p={p_val:.2g})'
-            else:
-                corr_text = "Not enough data for correlation"
+    Generating Runtime Plot...
+    ✓ Runtime plot saved to analysis_visuals_final/project_runtimes_vs_np.png
 
 
-            if 'sns' in sys.modules:
-                sns.scatterplot(data=df_perf_vs_loc, x="total_loc", y="best_s", hue="version", size="best_s", sizes=(50,300), legend="auto", palette="viridis")
-                plt.legend(title="Version", bbox_to_anchor=(1.05, 1), loc='upper left', fontsize='small')
-            else:
-                # Manual scatter plot if seaborn not available
-                cmap = matplotlib.colormaps['viridis']
-                norm = matplotlib.colors.Normalize(vmin=df_perf_vs_loc['best_s'].min(), vmax=df_perf_vs_loc['best_s'].max())
-                
-                for i, row in df_perf_vs_loc.iterrows():
-                    plt.scatter(row["total_loc"], row["best_s"], label=row["version"], 
-                                s=50 + 250 * (1-(row['best_s'] - df_perf_vs_loc['best_s'].min()) / (df_perf_vs_loc['best_s'].max() - df_perf_vs_loc['best_s'].min() + 1e-9) ), # Size based on perf
-                                color=cmap(norm(row['best_s'])), alpha=0.8)
-                plt.legend(title="Version", bbox_to_anchor=(1.05, 1), loc='upper left', fontsize='small')
 
-
-            for i, row in df_perf_vs_loc.iterrows():
-                plt.annotate(f"{row['version']}\n({row['total_loc']} LOC)", (row["total_loc"], row["best_s"]), 
-                             textcoords="offset points", xytext=(0,10), ha='center', fontsize=8, alpha=0.9)
-            
-            plt.xlabel("Total Lines of Code (Core Logic)")
-            plt.ylabel("Best NP=1 Runtime (seconds)")
-            plt.title(f"Performance (NP=1) vs. LOC\n{corr_text}")
-            plt.grid(True, ls=":", lw=0.5)
-            plt.tight_layout(rect=[0, 0, 0.80, 0.95] if len(df_perf_vs_loc['version'].unique()) > 3 else None) # Adjust for legend & title
-            
-            plot_path = visuals_output_dir / "performance_vs_loc_correlation.png"
-            plt.savefig(plot_path)
-            print(f"✓ Performance vs. LOC plot saved to {plot_path}")
-            plt.show()
-        else:
-            print("Not enough merged data (or <2 points) for performance vs. LOC plot or correlation.")
-    else:
-        print("No NP=1 best runs to plot against LOC.")
-else:
-    print("No LOC data (all versions have 0 LOC or df_loc is empty) to plot performance against.")
-
-# --- 3. Runtime Distribution Box Plots (Enhanced) ---
-print("\n--- Plotting: Runtime Distributions (Box Plots) for Key Versions & NPs ---")
-df_perf_for_boxplot = execute_query("""
-    SELECT version, np, total_time_s 
-    FROM perf_runs 
-    WHERE version IN ('V1 Serial', 'V2.2 ScatterHalo', 'V3 CUDA', 'V4 MPI+CUDA')
-      AND np IN (1, 2, 4) -- Focus on relevant NP values for these versions
-""")
-
-if df_perf_for_boxplot is not None and not df_perf_for_boxplot.empty:
-    plt.figure(figsize=(16, 9)) # Larger figure for better readability
     
-    # Create an interaction term for unique boxes and sort for consistent plotting order
-    df_perf_for_boxplot['Version_NP'] = df_perf_for_boxplot['version'] + ' (NP=' + df_perf_for_boxplot['np'].astype(str) + ')'
+![png](analysis_files/analysis_17_1.png)
     
-    # Define a consistent order for versions in the plot
-    version_order = ['V1 Serial', 'V2.2 ScatterHalo', 'V3 CUDA', 'V4 MPI+CUDA']
-    np_order = [1, 2, 4]
-    plot_order = [f"{v} (NP={n})" for v in version_order for n in np_order if f"{v} (NP={n})" in df_perf_for_boxplot['Version_NP'].unique()]
-
-    if 'sns' in sys.modules:
-        ax = sns.boxplot(data=df_perf_for_boxplot, x="Version_NP", y="total_time_s", order=plot_order, 
-                         showfliers=True, palette="pastel", whis=[5, 95]) # Show 5th-95th percentile whiskers
-        sns.stripplot(data=df_perf_for_boxplot, x="Version_NP", y="total_time_s", order=plot_order, 
-                      color=".3", size=3, jitter=0.15, alpha=0.6, ax=ax)
-    else: 
-        # Basic matplotlib boxplot (less ideal for grouped aesthetic)
-        # Pandas boxplot groups by the 'by' column. We'd need to pivot or iterate.
-        # For simplicity, if seaborn is not there, this specific grouped plot might be omitted or simplified.
-        print("[INFO] Seaborn not available, detailed grouped boxplot will be basic.")
-        df_perf_for_boxplot.boxplot(column='total_time_s', by='Version_NP', figsize=(16,9), grid=True, rot=45)
 
 
-    plt.xlabel("Implementation Stage (Version & Number of Processes)")
-    plt.ylabel("Runtime (seconds)")
-    plt.title("Runtime Distribution for Key Project Stages")
-    plt.xticks(rotation=45, ha="right", fontsize=10)
-    plt.grid(True, axis='y', ls=":", lw=0.5)
     
-    # Dynamic Y-axis scaling (consider log if data spans multiple orders of magnitude)
-    y_max = df_perf_for_boxplot['total_time_s'].max() if not df_perf_for_boxplot.empty else 1.0
-    y_min = df_perf_for_boxplot['total_time_s'].min() if not df_perf_for_boxplot.empty else 0.0
-    if y_max / max(1e-9, y_min) > 50 : # Heuristic for using log scale
-       plt.yscale('log')
-       plt.ylabel("Runtime (seconds, log scale)")
-       # Ensure y-ticks are sensible on log scale
-       if 'sns' in sys.modules and ax: # If using seaborn ax
-            ax.yaxis.set_major_formatter(FuncFormatter(log_tick_formatter))
+    Generating Speedup Plot...
+    ✓ Speedup curve plot saved to analysis_visuals_final/project_speedup_vs_np.png
 
 
-    plt.tight_layout()
-    plot_path = visuals_output_dir / "runtime_distributions_boxplot_enhanced.png"
-    plt.savefig(plot_path)
-    print(f"✓ Enhanced runtime distribution boxplot saved to {plot_path}")
-    plt.show()
-else:
-    print("No performance data suitable for detailed box plots (key versions/NPs).")
 
-
-# --- 4. Project Performance Timeline (Using `best_s` for clarity) ---
-print("\n--- Plotting: Project Best Performance Timeline ---")
-df_timeline = execute_query("""
-    SELECT p.ts, p.version, p.np, b.best_s
-    FROM perf_runs p JOIN best_runs b ON p.version = b.version AND p.np = b.np AND p.total_time_s = b.best_s
-    WHERE p.version IN ('V1 Serial', 'V2.1 BroadcastAll', 'V2.2 ScatterHalo', 'V3 CUDA', 'V4 MPI+CUDA')
-    GROUP BY 1, 2, 3, 4 -- Ensure unique points if multiple identical best runs at same ts
-    ORDER BY p.ts
-""")
-
-if df_timeline is not None and not df_timeline.empty and len(df_timeline['ts'].unique()) > 1:
-    plt.figure(figsize=(15, 8)) # Wider for timeline
     
-    if 'sns' in sys.modules:
-        # Using relplot for potentially better legend handling with style and hue
-        g = sns.relplot(data=df_timeline, x='ts', y='best_s', hue='version', style='np', 
-                        kind='scatter', s=100, legend='full', palette='tab10', height=7, aspect=1.8)
-        g.set_xticklabels(rotation=30, ha="right")
-        g.set(title='Timeline of Best Achieved Runtimes per Version/NP', xlabel='Timestamp of Best Run', ylabel='Best Runtime (s)')
-        if df_timeline['best_s'].max() / max(1e-9, df_timeline['best_s'].min()) > 50:
-            g.set(yscale="log")
-            g.ax.yaxis.set_major_formatter(FuncFormatter(log_tick_formatter))
-
-    else: # Fallback matplotlib scatter
-        cmap = matplotlib.colormaps['tab10']
-        versions_unique = df_timeline['version'].unique()
-        nps_unique = sorted(df_timeline['np'].unique())
-        markers = ['o', 's', '^', 'D', 'P', '*', 'X']
-
-        for i, ver in enumerate(versions_unique):
-            for j, num_p in enumerate(nps_unique):
-                subset = df_timeline[(df_timeline['version'] == ver) & (df_timeline['np'] == num_p)]
-                if not subset.empty:
-                    plt.scatter(subset['ts'], subset['best_s'], 
-                                label=f"{ver} NP{num_p}", 
-                                color=cmap.colors[i % len(cmap.colors)], 
-                                marker=markers[j % len(markers)], s=80, alpha=0.9)
-        plt.xlabel("Timestamp of Best Run")
-        plt.ylabel("Best Runtime (s)")
-        plt.title("Timeline of Best Achieved Runtimes per Version/NP")
-        plt.xticks(rotation=30, ha="right")
-        if df_timeline['best_s'].max() / max(1e-9, df_timeline['best_s'].min()) > 50:
-            plt.yscale('log')
-            plt.gca().yaxis.set_major_formatter(FuncFormatter(log_tick_formatter))
-        plt.legend(title="Version & NP", bbox_to_anchor=(1.05, 1), loc='upper left', fontsize='small')
-        plt.tight_layout(rect=[0, 0, 0.80, 1])
-
-
-    plot_path = visuals_output_dir / "project_best_performance_timeline.png"
-    plt.savefig(plot_path)
-    print(f"✓ Best performance timeline plot saved to {plot_path}")
-    if 'sns' not in sys.modules or not isinstance(g, sns.FacetGrid): # Only call plt.show() if not using relplot's implicit show
-        plt.show()
-    elif isinstance(g, sns.FacetGrid): # For relplot, figure is managed by FacetGrid
-        plt.close(g.fig) # Close the FacetGrid figure
-else:
-    print("Not enough distinct timestamped 'best_s' data for a meaningful timeline plot.")
-
-# --- 5. Final Comparative Summary Table & Scorecard Plot ---
-print("\n--- Generating Final Comparative Summary Table & Scorecard ---")
-summary_data = []
-key_versions_for_summary = ['V1 Serial', 'V2.2 ScatterHalo', 'V3 CUDA', 'V4 MPI+CUDA']
-
-for ver in key_versions_for_summary:
-    loc_val_series = df_loc[df_loc['version'] == ver]['total_loc']
-    loc_val = loc_val_series.iloc[0] if not loc_val_series.empty else 0 # Default to 0 if no LOC
+![png](analysis_files/analysis_17_3.png)
     
-    best_np1_s_df = execute_query(f"SELECT best_s FROM best_runs WHERE version='{ver}' AND np=1")
-    best_np1_s = best_np1_s_df.iloc[0]['best_s'] if best_np1_s_df is not None and not best_np1_s_df.empty else pd.NA
+
+
     
-    # For NP=4, only relevant for MPI-based versions; V1 and V3 are NP=1 only for this metric.
-    best_np4_s, speedup_np4, eff_np4 = pd.NA, pd.NA, pd.NA
-    if ver in ['V2.2 ScatterHalo', 'V4 MPI+CUDA']: # Versions expected to scale to NP=4
-        best_np4_s_df = execute_query(f"SELECT best_s FROM best_runs WHERE version='{ver}' AND np=4")
-        best_np4_s = best_np4_s_df.iloc[0]['best_s'] if best_np4_s_df is not None and not best_np4_s_df.empty else pd.NA
-            
-        speedup_np4_df = execute_query(f"SELECT S FROM speedup WHERE version='{ver}' AND np=4")
-        speedup_np4 = speedup_np4_df.iloc[0]['S'] if speedup_np4_df is not None and not speedup_np4_df.empty else pd.NA
-        
-        eff_np4_df = execute_query(f"SELECT E FROM efficiency WHERE version='{ver}' AND np=4")
-        eff_np4 = eff_np4_df.iloc[0]['E'] if eff_np4_df is not None and not eff_np4_df.empty else pd.NA
-    elif ver == 'V1 Serial' and pd.notna(best_np1_s) : # V1 has speedup/eff of 1 at NP=1
-        speedup_np4 = 1.0 
-        eff_np4 = 1.0
-        # best_np4_s remains NA for V1
+    Generating Efficiency Plot...
+    ✓ Efficiency plot saved to analysis_visuals_final/project_efficiency_vs_np.png
+
+
+
     
-    summary_data.append({
-        'Version': ver,
-        'LOC (Core)': loc_val,
-        'T_NP1 (s)': best_np1_s,
-        'T_NP4 (s)': best_np4_s, # Will be NA for V1, V3
-        'Speedup@NP4': speedup_np4, # Will be NA for V3, 1.0 for V1
-        'Efficiency@NP4': eff_np4  # Will be NA for V3, 1.0 for V1
-    })
-
-df_final_summary = pd.DataFrame(summary_data).set_index('Version')
-# Round numeric columns for display
-for col in df_final_summary.select_dtypes(include=float).columns:
-    df_final_summary[col] = df_final_summary[col].round(3)
-
-print("\n--- Final Comparative Summary Table ---")
-if not df_final_summary.empty:
-    display(df_final_summary)
-    # Export this table to markdown for the report
-    summary_md_path = visuals_output_dir / "project_final_summary_scorecard.md"
-    df_final_summary.reset_index().to_markdown(summary_md_path, index=False)
-    print(f"✓ Final summary table exported to {summary_md_path}")
-else:
-    print("Could not generate final summary table. Check underlying views.")
-
-# Scorecard Plot for Runtimes (T_NP1 and T_NP4 where applicable)
-df_runtimes_score = df_final_summary[['T_NP1 (s)', 'T_NP4 (s)']].copy()
-df_runtimes_score = df_runtimes_score.reset_index().melt(id_vars='Version', var_name='Metric', value_name='Time (s)').dropna()
-
-if not df_runtimes_score.empty:
-    plt.figure(figsize=(10, 7))
-    if 'sns' in sys.modules:
-        sns.barplot(data=df_runtimes_score, x="Version", y="Time (s)", hue="Metric", palette="viridis")
-    else:
-        df_runtimes_score.pivot(index='Version', columns='Metric', values='Time (s)').plot(kind='bar', figsize=(10,7), grid=True, rot=30)
-
-    plt.title("Scorecard: Best Runtimes (Lower is Better)")
-    plt.ylabel("Time (seconds)")
-    plt.xlabel("Project Version")
-    if not ('sns' in sys.modules): plt.xticks(rotation=30, ha="right") # Rotate for matplotlib if not seaborn
-    plt.legend(title="Metric", fontsize="small")
-    plt.tight_layout()
-    plot_path = visuals_output_dir / "scorecard_runtimes_final.png"
-    plt.savefig(plot_path)
-    print(f"✓ Runtimes scorecard plot saved to {plot_path}")
-    plt.show()
-
-# Scorecard Plot for Scalability (Speedup@NP4 and Efficiency@NP4)
-df_scalability_score = df_final_summary[['Speedup@NP4', 'Efficiency@NP4']].copy()
-df_scalability_score = df_scalability_score.reset_index().melt(id_vars='Version', var_name='Metric', value_name='Value').dropna()
-# Filter for versions that actually have NP4 data
-df_scalability_score = df_scalability_score[df_scalability_score['Version'].isin(['V2.2 ScatterHalo', 'V4 MPI+CUDA', 'V1 Serial'])]
+![png](analysis_files/analysis_17_5.png)
+    
 
 
-if not df_scalability_score.empty:
-    plt.figure(figsize=(10, 7))
-    if 'sns' in sys.modules:
-        sns.barplot(data=df_scalability_score, x="Version", y="Value", hue="Metric", palette="crest")
-    else:
-        df_scalability_score.pivot(index='Version', columns='Metric', values='Value').plot(kind='bar', figsize=(10,7), grid=True, rot=30)
-            
-    plt.title("Scorecard: Scalability Metrics (Higher is Better)")
-    plt.ylabel("Value")
-    plt.xlabel("Project Version")
-    if not ('sns' in sys.modules): plt.xticks(rotation=30, ha="right")
-    plt.legend(title="Metric", fontsize="small")
-    plt.tight_layout()
-    plot_path = visuals_output_dir / "scorecard_scalability_final.png"
-    plt.savefig(plot_path)
-    print(f"✓ Scalability scorecard plot saved to {plot_path}")
-    plt.show()
+    
+    --- All visual exports attempted. Check console for success/error messages. ---
 
-print("\n--- Advanced Analysis Cell Successfully Completed ---")
-```
 
 
 ```python
 # In[19]:
-# Cell 19: Grand Synthesis - Multi-Perspective Analysis & Advanced Visualization (Critique Addressed & ValueError Fixed)
+# Cell 19: Grand Synthesis - Multi-Perspective Analysis & Advanced Visualization (Critique Addressed & All KeyErrors Fixed)
 
-import seaborn as sns
-import numpy as np
+import seaborn as sns 
+import numpy as np 
 import pandas as pd
-from matplotlib.ticker import MaxNLocator, FuncFormatter
+from matplotlib.ticker import MaxNLocator, FuncFormatter 
 from scipy.stats import pearsonr
 import re # Ensure re is imported
-import sys # For checking module availability
-from pathlib import Path # For path operations
-import matplotlib.pyplot as plt # Ensure plt is explicitly available
+import sys # Ensure sys is imported (used by seaborn theme check)
+from pathlib import Path # Ensure Path is imported (used by visuals_output_dir)
+
+# Conditional Matplotlib import if plt was not imported in cell 1
+if 'plt' not in globals() or plt is None:
+    try:
+        import matplotlib.pyplot as plt
+        from matplotlib.lines import Line2D
+        print("[INFO] Matplotlib loaded in Cell 19.")
+    except ModuleNotFoundError:
+        plt = None
+        Line2D = None
+        print("[ERROR] Matplotlib not found in Cell 19. Plotting functions will be disabled.")
 
 # Apply a nicer default style if seaborn is available
 if 'seaborn' in sys.modules and 'matplotlib.pyplot' in sys.modules and plt is not None:
@@ -1258,98 +2164,13 @@ if 'seaborn' in sys.modules and 'matplotlib.pyplot' in sys.modules and plt is no
 else:
     print("[INFO] Seaborn not available or not fully initialized; using default Matplotlib styles.")
 
-visuals_output_dir = Path("analysis_visuals_final")
+visuals_output_dir = Path("analysis_visuals_final") 
 visuals_output_dir.mkdir(parents=True, exist_ok=True)
 print(f"[INFO] All plots and advanced exports for this cell will be saved to: {visuals_output_dir.resolve()}")
 
-# --- Dummy execute_query function if not defined elsewhere ---
-# This is essential for the script to run if it's standalone.
-# In a real notebook, this would interact with your SQL database.
-_db_conn = None # Placeholder for actual database connection
-def execute_query(query, conn=None):
-    global _db_conn
-    print(f"[INFO] Attempting to execute query: {query[:100]}...") # Print snippet
-    # This is a mock implementation. Replace with your actual database query logic.
-    if "FROM source_stats" in query and "COUNT(*)" in query:
-        # Mock response for LOC count check
-        return pd.DataFrame({'count': [10]}) # Assume some stats exist
-    if "FROM source_stats" in query:
-        # Mock LOC data for specified versions if df_loc is the target
-        mock_loc_data = {
-            "V1 Serial": 525, "V2.1 BroadcastAll": 306, "V2.2 ScatterHalo": 483,
-            "V3 CUDA": 354, "V4 MPI+CUDA": 576, "V5 MPI+CUDA-Aware": 0
-        }
-        version_match = re.search(r"SELECT '([^']*)' as version", query)
-        if version_match:
-            ver_name = version_match.group(1)
-            return pd.DataFrame({'version': [ver_name], 'total_loc': [mock_loc_data.get(ver_name, 0)]})
-        return pd.DataFrame({'version': [], 'total_loc': []}) # Default empty for general LOC query structure
-
-    if "FROM perf_runs" in query and "MEDIAN(total_time_s)" in query:
-        # Mock median performance data
-        # V1: 0.78s, V2.1: 0.74s, V2.2: 0.71s (NP1), 0.53s (NP2), 0.38s (NP4)
-        # V3: 0.49s, V4: 0.43s (NP1), 0.24s (NP2), 0.44s (NP4)
-        mock_median_data = {
-            ("V1 Serial", 1): 0.787,
-            ("V2.1 BroadcastAll", 1): 0.743,
-            ("V2.1 BroadcastAll", 4): 0.833, # Mock for max_np
-            ("V2.2 ScatterHalo", 1): 0.713,
-            ("V2.2 ScatterHalo", 4): 0.383, # Mock for max_np
-            ("V3 CUDA", 1): 0.491,
-            ("V4 MPI+CUDA", 1): 0.428,
-            ("V4 MPI+CUDA", 4): 0.445, # Mock for max_np
-            ("V4 MPI+CUDA", 2): 0.240, # for the actual dip
-        }
-        version_match = re.search(r"version = '([^']*)'", query)
-        np_match = re.search(r"np = (\d+)", query)
-        if version_match and np_match:
-            ver, np_val = version_match.group(1), int(np_match.group(1))
-            return pd.DataFrame({'median_s': [mock_median_data.get((ver, np_val), pd.NA)]})
-        return pd.DataFrame({'median_s': [pd.NA]})
-
-    if "FROM perf_runs" in query and "MAX(np)" in query:
-         # Mock max NP
-        mock_max_np = {"V2.1 BroadcastAll": 4, "V2.2 ScatterHalo": 4, "V4 MPI+CUDA": 4}
-        version_match = re.search(r"version='([^']*)'", query)
-        if version_match:
-            ver = version_match.group(1)
-            return pd.DataFrame({'max_np': [mock_max_np.get(ver, 1)]}) # Default to 1 if not scalable
-        return pd.DataFrame({'max_np': [1]})
-
-    if "FROM run_stats" in query:
-        # Mock CV data from run_stats
-        # CV = SD/Mean. V1: 0.21, V2.2 NP1:0.26 NP4:0.42, V3:0.35, V4 NP1:0.77 NP4:0.25
-        # n values: V1(10), V2.2 NP1(13) NP4(11), V3(13), V4 NP1(13) NP4(13)
-        mock_cv_data = {
-            ("V1 Serial", 1): (0.212, 10),
-            ("V2.2 ScatterHalo", 1): (0.265, 13), ("V2.2 ScatterHalo", 2): (0.493, 13), ("V2.2 ScatterHalo", 4): (0.419, 11),
-            ("V3 CUDA", 1): (0.350, 13),
-            ("V4 MPI+CUDA", 1): (0.768, 13), ("V4 MPI+CUDA", 2): (0.518, 12), ("V4 MPI+CUDA", 4): (0.255, 13),
-        }
-        version_match = re.search(r"version='([^']*)'", query)
-        np_match = re.search(r"np=(\d+)", query)
-
-        if "SELECT version, np, n, ROUND(mean_s, 4) as mean_s, ROUND(sd_s, 4) as sd_s" in query : # For the CV bar plot data
-             results = []
-             for (ver_key, np_key), (cv_val, n_val) in mock_cv_data.items():
-                 if ver_key in ('V1 Serial', 'V2.2 ScatterHalo', 'V3 CUDA', 'V4 MPI+CUDA'): # Filter for relevant versions
-                    results.append({'version': ver_key, 'np': np_key, 'n': n_val, 'mean_s': 0.1, 'sd_s': cv_val * 0.1, 'CV': cv_val})
-             return pd.DataFrame(results)
-
-        if version_match and np_match:
-            ver, np_val = version_match.group(1), int(np_match.group(1))
-            cv, n = mock_cv_data.get((ver, np_val), (pd.NA, 0))
-            return pd.DataFrame({'CV': [cv], 'n': [n]}) # Ensure 'n' is returned if needed by calling code
-        return pd.DataFrame({'CV': [pd.NA], 'n': [0]})
-    # Fallback for other queries
-    print(f"[WARNING] Mock response for query: {query[:100]}... returning empty DataFrame or default.")
-    return pd.DataFrame()
-# --- End of Dummy execute_query ---
-
-
 # --- Helper to format y-axis ticks for log scale if used ---
 def log_tick_formatter(val, pos=None):
-    return f"{val:.2g}"
+    return f"{val:.2g}" 
 
 # --- 1. Robust Lines of Code (LOC) Aggregation (Core Algorithmic Code) ---
 print("\n--- 1. Aggregating Lines of Code (LOC) for Canonical Versions ---")
@@ -1364,27 +2185,18 @@ version_loc_map = { # Paths relative to 'final_project/' directory
 version_loc_data = []
 df_loc = pd.DataFrame(columns=['version', 'total_loc'])
 
+if 'execute_query' not in globals():
+    raise NameError("The function 'execute_query' is not defined. Please run previous cells.")
+
 source_stats_check_df = execute_query("SELECT COUNT(*) as count FROM source_stats")
 if source_stats_check_df is None or source_stats_check_df.iloc[0]['count'] == 0:
-    print("[WARNING] 'source_stats' table is empty or unreachable. Using MOCK LOC data for plots.")
-    # Populate df_loc with mock data if source_stats is empty
-    mock_loc_data_list = [
-        {'version': "V1 Serial", 'total_loc': 525}, {'version': "V2.1 BroadcastAll", 'total_loc': 306},
-        {'version': "V2.2 ScatterHalo", 'total_loc': 483}, {'version': "V3 CUDA", 'total_loc': 354},
-        {'version': "V4 MPI+CUDA", 'total_loc': 576}, {'version': "V5 MPI+CUDA-Aware", 'total_loc': 0} # Assume V5 not implemented
-    ]
-    df_loc = pd.DataFrame(mock_loc_data_list)
+    print("[WARNING] 'source_stats' table is empty. LOC aggregation will result in zeros.")
 else:
     for version_name, dir_prefixes in version_loc_map.items():
         like_clauses = [f"relpath LIKE '{prefix}%'" for prefix in dir_prefixes]
         dir_filter = " OR ".join(like_clauses)
         ext_filter = "OR ".join([f"LOWER(relpath) LIKE '%.{ext}'" for ext in ['cpp', 'cu', 'hpp', 'h', 'c', 'inl']])
-
-        query = f"""
-        SELECT '{version_name}' as version, COALESCE(SUM(loc), 0) as total_loc
-        FROM source_stats
-        WHERE ({dir_filter}) AND ({ext_filter});
-        """
+        query = f"SELECT '{version_name}' as version, COALESCE(SUM(loc), 0) as total_loc FROM source_stats WHERE ({dir_filter}) AND ({ext_filter});"
         loc_df_query_result = execute_query(query)
         current_loc = loc_df_query_result.iloc[0]['total_loc'] if loc_df_query_result is not None and not loc_df_query_result.empty else 0
         version_loc_data.append({'version': version_name, 'total_loc': int(current_loc)})
@@ -1397,61 +2209,98 @@ if not df_loc_display.empty:
 else:
     print("No LOC found for specified version paths/extensions. df_loc is empty or all LOC are 0.")
 
-
 # --- 2. Plot: Median NP=1 Performance vs. LOC (Revised Visuals) ---
 print("\n--- 2. Plotting: Median NP=1 Performance vs. Lines of Code (Revised Visuals) ---")
-df_loc_for_plot = df_loc[df_loc['total_loc'] > 0]
+df_loc_for_plot = df_loc[df_loc['total_loc'] > 0].copy()
+df_perf_vs_loc = pd.DataFrame() 
+
 if not df_loc_for_plot.empty and plt is not None:
-    df_median_np1 = execute_query("SELECT version, MEDIAN(total_time_s) as median_np1_s FROM perf_runs WHERE np = 1 AND total_time_s IS NOT NULL GROUP BY version")
+    # Robustly get median NP=1 times, ensuring 'version' column is present
+    # The SQL query should bring version due to GROUP BY. If not, pandas groupby is a fallback.
+    df_median_np1_raw = execute_query("SELECT version, total_time_s FROM perf_runs WHERE np = 1 AND total_time_s IS NOT NULL")
+    df_median_np1 = pd.DataFrame() # Initialize
 
-    if df_median_np1 is not None and not df_median_np1.empty:
-        df_perf_vs_loc = pd.merge(df_median_np1, df_loc_for_plot, on="version")
+    if df_median_np1_raw is not None and not df_median_np1_raw.empty and 'version' in df_median_np1_raw.columns:
+        df_median_np1 = df_median_np1_raw.groupby('version')['total_time_s'].median().reset_index()
+        df_median_np1.rename(columns={'total_time_s': 'median_np1_s'}, inplace=True)
+        print("[DEBUG] df_median_np1 columns after pandas groupby and rename:", df_median_np1.columns)
+    else:
+        print("[WARNING] Could not fetch or process raw NP=1 performance data, or 'version' column missing initially.")
 
-        if not df_perf_vs_loc.empty and len(df_perf_vs_loc) > 1 :
-            plt.figure(figsize=(11, 7))
+    if df_median_np1 is not None and not df_median_np1.empty and 'version' in df_median_np1.columns:
+        # Standardize 'version' column name in df_loc_for_plot just in case (though likely already correct)
+        if 'Version' in df_loc_for_plot.columns and 'version' not in df_loc_for_plot.columns:
+            df_loc_for_plot.rename(columns={'Version': 'version'}, inplace=True)
+        elif 'VERSION' in df_loc_for_plot.columns and 'version' not in df_loc_for_plot.columns:
+            df_loc_for_plot.rename(columns={'VERSION': 'version'}, inplace=True)
+
+        if 'version' in df_loc_for_plot.columns:
+            df_perf_vs_loc = pd.merge(df_median_np1, df_loc_for_plot, on="version")
+        else:
+            print(f"[ERROR] 'version' column missing in df_loc_for_plot after standardization attempt. Columns: {df_loc_for_plot.columns}")
+            
+        if not df_perf_vs_loc.empty and len(df_perf_vs_loc) > 1:
+            plt.figure(figsize=(11, 7)) 
             df_corr = df_perf_vs_loc[['total_loc', 'median_np1_s']].dropna()
             corr_text = "Correlation: N/A (requires >1 data point)"
-            pearson_r_val, p_value_val = pd.NA, pd.NA # Initialize for later use
+            correlation_val_loc_perf_plot, p_val_loc_perf_plot = pd.NA, pd.NA 
+
             if len(df_corr) >= 2:
-                 pearson_r_val, p_value_val = pearsonr(df_corr["total_loc"], df_corr["median_np1_s"])
-                 corr_text = f'Pearson R: {pearson_r_val:.2f} (p={p_value_val:.2g})'
-
+                 correlation_val_loc_perf_plot, p_val_loc_perf_plot = pearsonr(df_corr["total_loc"], df_corr["median_np1_s"])
+                 corr_text = f'Pearson R: {correlation_val_loc_perf_plot:.2f} (p={p_val_loc_perf_plot:.2g})'
+            
             unique_versions_count = len(df_perf_vs_loc['version'].unique())
-            palette = sns.color_palette("viridis", n_colors=unique_versions_count) if 'seaborn' in sys.modules and unique_versions_count > 0 else "viridis"
-
-            # Use a different size mapping for LOC if desired, e.g., based on relative LOC
-            min_loc, max_loc = df_perf_vs_loc['total_loc'].min(), df_perf_vs_loc['total_loc'].max()
-            sizes = 100 + 400 * (df_perf_vs_loc['total_loc'] - min_loc) / (max_loc - min_loc + 1e-9) if max_loc > min_loc else 150
-
-
+            palette_arg = sns.color_palette("viridis", n_colors=unique_versions_count) if 'seaborn' in sys.modules and unique_versions_count > 0 else "viridis"
+            
             if 'seaborn' in sys.modules:
-                sns.scatterplot(data=df_perf_vs_loc, x="total_loc", y="median_np1_s", hue="version",
-                                size="total_loc", sizes=(100,500), # Make size reflect LOC
-                                legend="auto", palette=palette, alpha=0.85)
-            else:
-                for i, row in df_perf_vs_loc.iterrows(): plt.scatter(row["total_loc"], row["median_np1_s"], label=row["version"], s=sizes.iloc[i] if isinstance(sizes, pd.Series) else sizes, alpha=0.7)
+                sns.scatterplot(data=df_perf_vs_loc, x="total_loc", y="median_np1_s", hue="version", 
+                                size="total_loc", sizes=(50,250), 
+                                legend="auto", palette=palette_arg, alpha=0.85)
+            else: 
+                unique_versions = df_perf_vs_loc['version'].unique()
+                if plt is not None :
+                    colors_cmap = plt.cm.get_cmap('viridis', len(unique_versions)) if len(unique_versions) > 0 and plt is not None else None
+                    for i, ver_name in enumerate(unique_versions):
+                        ver_data = df_perf_vs_loc[df_perf_vs_loc['version'] == ver_name]
+                        if not ver_data.empty:
+                             plt.scatter(ver_data["total_loc"], ver_data["median_np1_s"], 
+                                         label=ver_name, s=ver_data["total_loc"]*0.5 if 'total_loc' in ver_data else 150, 
+                                         color=colors_cmap(i) if colors_cmap else None, alpha=0.7)
+                else: print("[WARNING] Matplotlib (plt) not available for scatter plot fallback.")
 
-            plt.legend(title="Version", bbox_to_anchor=(1.03, 1), loc='upper left', fontsize='small')
-            for i, row in df_perf_vs_loc.iterrows():
-                plt.annotate(f"{row['version']}", (row["total_loc"], row["median_np1_s"]),
-                             textcoords="offset points", xytext=(5,5), ha='left', fontsize=8,
-                             bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="gray", alpha=0.5))
-
-            plt.xlabel("Total Lines of Code (Core Algorithmic Files)", fontsize=11)
-            plt.ylabel("Median NP=1 Runtime (seconds)", fontsize=11)
-            plt.title(f"Code Complexity vs. Single-Process Performance (Median Runtime)\n{corr_text}", fontsize=13)
-            plt.grid(True, ls=":", lw=0.5, which="both")
-            if not df_perf_vs_loc.empty and (df_perf_vs_loc['median_np1_s'].max() / max(1e-9, df_perf_vs_loc['median_np1_s'].min()) > 20):
-                plt.yscale('log')
-                plt.ylabel("Median NP=1 Runtime (seconds, log scale)", fontsize=11)
-                if plt.gca(): plt.gca().yaxis.set_major_formatter(FuncFormatter(log_tick_formatter))
-            plt.tight_layout(rect=[0, 0, 0.82, 0.95])
-            plot_path = visuals_output_dir / "adv_median_performance_vs_loc_corr_revised.png"
-            plt.savefig(plot_path); print(f"✓ Median Performance vs. LOC plot saved to {plot_path}"); plt.show()
-        else: print("[WARNING] Not enough merged data for median performance vs. LOC plot or correlation.")
-    else: print("[WARNING] No median NP=1 runs to plot against LOC.")
-else: print("[WARNING] No LOC data or Matplotlib not available. Perf vs LOC plot skipped.")
-
+            if plt is not None:
+                plt.legend(title="Version", bbox_to_anchor=(1.03, 1), loc='upper left', fontsize='small') 
+                for i, row in df_perf_vs_loc.iterrows():
+                    plt.annotate(f"{row['version']}", (row["total_loc"], row["median_np1_s"]), 
+                                 textcoords="offset points", xytext=(5,5), ha='left', fontsize=8, 
+                                 bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="gray", alpha=0.5))
+                
+                plt.xlabel("Total Lines of Code (Core Algorithmic Files)", fontsize=11)
+                plt.ylabel("Median NP=1 Runtime (seconds)", fontsize=11) 
+                plt.title(f"Code Complexity vs. Single-Process Performance (Median Runtime)\n{corr_text}", fontsize=13)
+                plt.grid(True, ls=":", lw=0.5, which="both")
+                if not df_perf_vs_loc.empty and (df_perf_vs_loc['median_np1_s'].max() / max(1e-9, df_perf_vs_loc['median_np1_s'].min()) > 20):
+                    plt.yscale('log')
+                    plt.ylabel("Median NP=1 Runtime (seconds, log scale)", fontsize=11)
+                    if plt.gca(): plt.gca().yaxis.set_major_formatter(FuncFormatter(log_tick_formatter))
+                plt.tight_layout(rect=[0, 0, 0.82, 0.95]) 
+                plot_path = visuals_output_dir / "adv_median_performance_vs_loc_corr_revised.png"
+                plt.savefig(plot_path); print(f"✓ Median Performance vs. LOC plot saved to {plot_path}"); plt.show()
+        elif not df_perf_vs_loc.empty and len(df_perf_vs_loc) <=1 :
+             print("[INFO] Only one data point after merging for median performance vs. LOC plot. Correlation and detailed scatter plot skipped.")
+             if not df_perf_vs_loc.empty and plt is not None:
+                row = df_perf_vs_loc.iloc[0]
+                plt.figure(figsize=(7, 5))
+                plt.scatter(row["total_loc"], row["median_np1_s"], label=row["version"], s=150)
+                plt.annotate(f"{row['version']}", (row["total_loc"], row["median_np1_s"]), textcoords="offset points", xytext=(5,5), ha='left')
+                plt.xlabel("Total Lines of Code"); plt.ylabel("Median NP=1 Runtime (s)")
+                plt.title("Single Data Point: Performance vs. LOC")
+                plt.legend(); plt.grid(True, ls=":", lw=0.5); plt.tight_layout()
+                plot_path_single = visuals_output_dir / "adv_median_performance_vs_loc_single_point.png"
+                plt.savefig(plot_path_single); print(f"✓ Single point plot saved to {plot_path_single}"); plt.show()
+        else: print("[WARNING] Not enough merged data for median performance vs. LOC plot or correlation (df_perf_vs_loc is empty).")
+    else: print("[WARNING] No median NP=1 runs to plot against LOC (df_median_np1 is None or empty).")
+else: print("[WARNING] No LOC data to plot (df_loc_for_plot is empty) or Matplotlib not available. Perf vs LOC plot skipped.")
 
 # --- 3. Runtime Variability Analysis (CV with 'n' annotations, improved aesthetics) ---
 print("\n--- 3. Runtime Variability (CV with 'n' annotations, improved aesthetics) ---")
@@ -1463,131 +2312,139 @@ df_variability = execute_query("""
 if df_variability is not None and not df_variability.empty and plt is not None:
     print("CV for Runtimes (Lower = More Stable):"); display(df_variability)
     if len(df_variability) > 1:
-        plt.figure(figsize=(11, 6.5))
-        ax = None
+        plt.figure(figsize=(11, 6.5)) 
+        ax = plt.gca() 
         hue_order_cv = sorted(df_variability['np'].unique())
 
         if 'seaborn' in sys.modules:
-            ax = sns.barplot(data=df_variability, x="version", y="CV", hue="np",
-                             dodge=True, palette="coolwarm_r", errorbar=None, hue_order=hue_order_cv)
-            sns.despine(left=True, bottom=True) # Clean look
-            if ax:
-                for bar_container in ax.containers: # Iterate through containers of bars for each hue level
-                    for bar in bar_container:
-                        height = bar.get_height()
-                        if pd.notna(height) and height > 0.001: # Check if bar has valid height
-                            # Get corresponding 'n' value
-                            # This requires finding the matching (version, np) in df_variability
-                            # The bar object itself doesn't directly store original data row index easily
-                            # We infer based on bar position - this can be tricky if bars are missing.
-                            # A more robust way is to iterate df_variability and plot annotations but sns.barplot is convenient.
-                            # For simplicity, we'll try to match back.
-                            x_tick_labels = [label.get_text() for label in ax.get_xticklabels()]
-                            bar_x_center = bar.get_x() + bar.get_width() / 2.
-                            version_idx_approx = np.argmin(np.abs([tick.get_position()[0] - bar_x_center for tick in ax.get_xticklabels()]))
-                            current_version = x_tick_labels[version_idx_approx]
-
-                            # Find current_np based on hue_order and bar_container index (requires careful matching)
-                            # This part is simplified; a robust solution would be more complex.
-                            # Assuming hue_order_cv maps to containers if sns creates them in that order.
-                            current_np = None
-                            for idx, h_val in enumerate(hue_order_cv): # Try to find which hue this bar belongs to
-                                if bar_container == ax.containers[idx]:
-                                    current_np = h_val
-                                    break
+            ax_sns = sns.barplot(data=df_variability, x="version", y="CV", hue="np", 
+                             dodge=True, palette="coolwarm_r", errorbar=None, hue_order=hue_order_cv, ax=ax)
+            sns.despine(left=True, bottom=True) 
+            if ax_sns: 
+                for bar_idx, bar in enumerate(ax_sns.patches):
+                    height = bar.get_height()
+                    if pd.notna(height) and height > 0.001: 
+                        num_versions_on_x_cat = len(ax_sns.get_xticklabels()) 
+                        num_hue_levels = len(hue_order_cv)
+                        
+                        if num_versions_on_x_cat > 0 and num_hue_levels > 0:
+                            version_cat_idx = bar_idx % num_versions_on_x_cat 
+                            hue_idx = bar_idx // num_versions_on_x_cat
                             
-                            n_val_text = ""
-                            if current_version and current_np is not None:
-                                n_val_series = df_variability[(df_variability['version'] == current_version) & (df_variability['np'] == current_np)]['n']
+                            xtick_labels_list = [label.get_text() for label in ax_sns.get_xticklabels()]
+                            if version_cat_idx < len(xtick_labels_list):
+                                current_version_text = xtick_labels_list[version_cat_idx]
+                                current_np_val = hue_order_cv[hue_idx]
+                                
+                                n_val_series = df_variability[(df_variability['version'] == current_version_text) & (df_variability['np'] == current_np_val)]['n']
                                 n_val_text = f"n={n_val_series.iloc[0]}" if not n_val_series.empty else ""
-
-                            ax.text(bar.get_x() + bar.get_width() / 2., height + 0.01, n_val_text,
-                                    ha='center', va='bottom', color='black', fontsize=7)
-        else:
-             df_variability.pivot(index='version', columns='np', values='CV').plot(kind='bar', figsize=(11,6.5), grid=False, rot=15, ax=plt.gca())
-             ax = plt.gca() # For consistency
-
-        plt.title("Runtime CV (Stability)", fontsize=13)
+                                
+                                ax_sns.text(bar.get_x() + bar.get_width() / 2., height + 0.01, n_val_text, 
+                                        ha='center', va='bottom', color='black', fontsize=7)
+        else: 
+             df_variability_pivot = df_variability.pivot(index='version', columns='np', values='CV')
+             df_variability_pivot.plot(kind='bar', figsize=(11,6.5), grid=False, rot=15, ax=ax)
+        
+        plt.title("Runtime CV (Stability)", fontsize=13) 
         plt.xlabel("Version", fontsize=10); plt.ylabel("CV (StdDev / Mean)", fontsize=10)
-        if ax and ax.get_legend() is not None: plt.legend(title="NP", loc="upper right", fontsize='x-small', frameon=False)
-        plt.xticks(rotation=15, ha="right", fontsize='small')
+        if ax.get_legend() is not None: plt.legend(title="NP", loc="upper right", fontsize='x-small', frameon=False)
+        plt.xticks(rotation=15, ha="right", fontsize='small') 
         plt.tight_layout()
         plot_path = visuals_output_dir / "adv_runtime_variability_cv_annotated_revised.png"
         plt.savefig(plot_path); print(f"✓ Runtime CV plot saved to {plot_path}"); plt.show()
 else: print("Not enough data (or n<=1, or Matplotlib unavailable) for CV plot.")
 
-
 # --- 4. Multi-Metric Radar Chart (Revised Metrics & Visuals) ---
 print("\n--- 4. Multi-Metric Radar Chart for Key Versions (Revised Metrics & Visuals) ---")
 radar_metrics_raw = ['NP1 Perf (1/Med.T)', 'Max Speedup (Med.T based)', 'Max Efficiency (Med.T based)', 'Code Volume (log10 LOC)']
-radar_metrics_display = ['NP1 Perf (1/Med.T_NP1)\n(Higher=Better)',
-                         'Max Scaled Speedup\n(Median-based, Higher=Better)',
-                         'Max Scaled Efficiency\n(Median-based, Higher=Better)',
+radar_metrics_display = ['NP1 Perf (1/Med.T_NP1)\n(Higher=Better)', 
+                         'Max Scaled Speedup\n(Median-based, Higher=Better)', 
+                         'Max Scaled Efficiency\n(Median-based, Higher=Better)', 
                          'Code Volume (log10 LOC)\n(Lower=Better -> Outer Edge)']
 radar_versions = ['V1 Serial', 'V2.2 ScatterHalo', 'V3 CUDA', 'V4 MPI+CUDA']
 radar_data_list = []
 
 if not df_loc.empty and plt is not None:
     for ver in radar_versions:
-        median_t_np1_df = execute_query(f"SELECT MEDIAN(total_time_s) as t_val FROM perf_runs WHERE version = '{ver}' AND np = 1 AND total_time_s IS NOT NULL")
-        median_t_np1_val = median_t_np1_df.iloc[0]['t_val'] if median_t_np1_df is not None and not median_t_np1_df.empty and pd.notna(median_t_np1_df.iloc[0]['t_val']) else 0
-        perf_val = 1.0 / median_t_np1_val if median_t_np1_val > 1e-9 else 0
+        # --- START KEYERROR 't_val' FIX for RADAR ---
+        # Fetch median, being flexible about the returned column name
+        median_t_np1_query_df = execute_query(f"SELECT MEDIAN(total_time_s) FROM perf_runs WHERE version = '{ver}' AND np = 1 AND total_time_s IS NOT NULL")
+        median_t_np1_val = 0
+        if median_t_np1_query_df is not None and not median_t_np1_query_df.empty:
+            # Check for common default aggregate names if 't_val' (alias) isn't used/returned
+            if 'median(total_time_s)' in median_t_np1_query_df.columns:
+                median_t_np1_val = median_t_np1_query_df.iloc[0]['median(total_time_s)']
+            elif 'median_total_time_s' in median_t_np1_query_df.columns: # Another possible default
+                median_t_np1_val = median_t_np1_query_df.iloc[0]['median_total_time_s']
+            elif not median_t_np1_query_df.columns.empty: # Fallback to first column if only one
+                 median_t_np1_val = median_t_np1_query_df.iloc[0,0]
 
+            if not pd.notna(median_t_np1_val): median_t_np1_val = 0 # Ensure it's a number
+        # --- END KEYERROR 't_val' FIX for RADAR (part 1) ---
+        
+        perf_val = 1.0 / median_t_np1_val if median_t_np1_val > 1e-9 else 0
+        
         np_at_max_s = 1
-        if ver in ['V2.2 ScatterHalo', 'V4 MPI+CUDA']:
+        if ver in ['V2.2 ScatterHalo', 'V4 MPI+CUDA']: 
             max_np_for_ver_df = execute_query(f"SELECT MAX(np) as max_np FROM perf_runs WHERE version = '{ver}' AND total_time_s IS NOT NULL AND np > 1")
             if max_np_for_ver_df is not None and not max_np_for_ver_df.empty and pd.notna(max_np_for_ver_df.iloc[0]['max_np']):
                 np_at_max_s = int(max_np_for_ver_df.iloc[0]['max_np'])
+        
+        # --- START KEYERROR 't_val' FIX for RADAR (part 2) ---
+        median_t_np_max_query_df = execute_query(f"SELECT MEDIAN(total_time_s) FROM perf_runs WHERE version = '{ver}' AND np = {np_at_max_s} AND total_time_s IS NOT NULL")
+        median_t_np_max_val = 0
+        if median_t_np_max_query_df is not None and not median_t_np_max_query_df.empty:
+            if 'median(total_time_s)' in median_t_np_max_query_df.columns:
+                median_t_np_max_val = median_t_np_max_query_df.iloc[0]['median(total_time_s)']
+            elif 'median_total_time_s' in median_t_np_max_query_df.columns:
+                median_t_np_max_val = median_t_np_max_query_df.iloc[0]['median_total_time_s']
+            elif not median_t_np_max_query_df.columns.empty:
+                 median_t_np_max_val = median_t_np_max_query_df.iloc[0,0]
+            if not pd.notna(median_t_np_max_val): median_t_np_max_val = 0
+        # --- END KEYERROR 't_val' FIX for RADAR (part 2) ---
 
-        median_t_np_max_df = execute_query(f"SELECT MEDIAN(total_time_s) as t_val FROM perf_runs WHERE version = '{ver}' AND np = {np_at_max_s} AND total_time_s IS NOT NULL")
-        median_t_np_max_val = median_t_np_max_df.iloc[0]['t_val'] if median_t_np_max_df is not None and not median_t_np_max_df.empty and pd.notna(median_t_np_max_df.iloc[0]['t_val']) else 0
-
-        speedup_val = (median_t_np1_val / median_t_np_max_val) if median_t_np1_val > 1e-9 and median_t_np_max_val > 1e-9 else (1.0 if np_at_max_s == 1 else 0)
-        efficiency_val = (speedup_val / np_at_max_s) if np_at_max_s > 0 else (1.0 if np_at_max_s == 1 else 0)
+        speedup_val = (median_t_np1_val / median_t_np_max_val) if median_t_np1_val > 1e-9 and median_t_np_max_val > 1e-9 else (1.0 if np_at_max_s == 1 and median_t_np1_val > 1e-9 else 0)
+        efficiency_val = (speedup_val / np_at_max_s) if np_at_max_s > 0 else (1.0 if np_at_max_s == 1 and median_t_np1_val > 1e-9 else 0)
 
         loc_val_series = df_loc[df_loc['version'] == ver]['total_loc']
         loc_val = loc_val_series.iloc[0] if not loc_val_series.empty and loc_val_series.iloc[0] > 0 else 1
-        log_loc_val = np.log10(loc_val)
+        log_loc_val = np.log10(loc_val) 
         radar_data_list.append([perf_val, speedup_val, efficiency_val, log_loc_val])
 
 if radar_data_list:
     df_radar_raw = pd.DataFrame(radar_data_list, columns=radar_metrics_raw, index=radar_versions)
     df_radar_normalized = df_radar_raw.copy()
-
+    
     for col in ['NP1 Perf (1/Med.T)', 'Max Speedup (Med.T based)', 'Max Efficiency (Med.T based)']:
         min_v, max_v = df_radar_raw[col].min(), df_radar_raw[col].max()
-        df_radar_normalized[col] = (df_radar_raw[col] - min_v) / (max_v - min_v) if (max_v - min_v) > 1e-9 else 0.5 # Avoid div by zero
+        df_radar_normalized[col] = (df_radar_raw[col] - min_v) / (max_v - min_v) if (max_v - min_v) > 1e-9 else 0.5
     col_log_loc = 'Code Volume (log10 LOC)'
     min_v, max_v = df_radar_raw[col_log_loc].min(), df_radar_raw[col_log_loc].max()
     if (max_v - min_v) > 1e-9:
-         df_radar_normalized[col_log_loc] = 1 - ((df_radar_raw[col_log_loc] - min_v) / (max_v - min_v)) # Invert for "lower is better"
-    else: df_radar_normalized[col_log_loc] = 0.5
+         df_radar_normalized[col_log_loc] = 1 - ((df_radar_raw[col_log_loc] - min_v) / (max_v - min_v))
+    else: df_radar_normalized[col_log_loc] = 0.5 
 
     num_vars = len(radar_metrics_raw)
-    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist() + [0] # Close the loop
-    fig, ax = plt.subplots(figsize=(10, 10), subplot_kw=dict(polar=True))
-
+    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+    angles += angles[:1] 
+    
+    fig, ax = plt.subplots(figsize=(10, 10), subplot_kw=dict(polar=True)) 
     line_styles = ['-', '--', '-.', ':']
     marker_styles = ['o', 's', '^', 'D']
-    # Use a seaborn color palette for better distinction if available
-    palette_radar = sns.color_palette("husl", n_colors=len(df_radar_normalized.index)) if 'seaborn' in sys.modules else plt.cm.get_cmap('viridis', len(df_radar_normalized.index))
-
 
     for i, version_name in enumerate(df_radar_normalized.index):
-        values = df_radar_normalized.loc[version_name].values.flatten().tolist() + [df_radar_normalized.loc[version_name].values.flatten().tolist()[0]] # Close loop
-        color = palette_radar[i % len(palette_radar)] if 'seaborn' in sys.modules else palette_radar(i / len(df_radar_normalized.index))
-
-        ax.plot(angles, values, linewidth=1.5, linestyle=line_styles[i % len(line_styles)],
-                label=version_name, marker=marker_styles[i % len(marker_styles)], markersize=6, color=color)
-        ax.fill(angles, values, alpha=0.15, color=color)
-
-
-    ax.set_xticks(angles[:-1]); ax.set_xticklabels(radar_metrics_display, fontsize=9)
+        values = df_radar_normalized.loc[version_name].values.flatten().tolist()
+        values += values[:1] 
+        ax.plot(angles, values, linewidth=1.5, linestyle=line_styles[i % len(line_styles)], 
+                label=version_name, marker=marker_styles[i % len(marker_styles)], markersize=5)
+        ax.fill(angles, values, alpha=0.1) 
+    
+    ax.set_xticks(angles[:-1]); ax.set_xticklabels(radar_metrics_display, fontsize=9) 
     ax.set_yticks(np.arange(0, 1.1, 0.2)); ax.set_yticklabels([f"{y:.1f}" for y in np.arange(0, 1.1, 0.2)], fontsize=8)
-    ax.set_rlabel_position(30) # Move radial labels
-    plt.title('Comparative Multi-Metric Radar Chart (Normalized)', size=14, y=1.12)
-    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.22), fontsize='small', ncol=len(radar_versions)//2 or 2) # Adjust ncol dynamically
-
+    ax.set_rlabel_position(30) 
+    plt.title('Comparative Multi-Metric Radar Chart (Normalized)', size=14, y=1.12) 
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.22), fontsize='small', ncol=len(radar_versions)) 
+    
     plot_path = visuals_output_dir / "adv_multi_metric_radar_chart_final_revised.png"
     plt.savefig(plot_path, bbox_inches='tight'); print(f"✓ Final Revised Radar chart saved to {plot_path}"); plt.show()
 else: print("[WARNING] Not enough data for revised radar chart (check LOC and perf data).")
@@ -1597,44 +2454,54 @@ else: print("[WARNING] Not enough data for revised radar chart (check LOC and pe
 print("\n--- 5. Generating Final Comprehensive Scorecard Table (Median Runtimes, CV from run_stats) ---")
 summary_data_final = []
 key_versions_for_scorecard = ['V1 Serial', 'V2.1 BroadcastAll', 'V2.2 ScatterHalo', 'V3 CUDA', 'V4 MPI+CUDA']
-df_final_scorecard = pd.DataFrame() # Initialize
+df_final_scorecard = pd.DataFrame() 
 
 if not df_loc.empty:
     for ver in key_versions_for_scorecard:
         loc_val_series = df_loc[df_loc['version'] == ver]['total_loc']
         loc_val = loc_val_series.iloc[0] if not loc_val_series.empty else 0
-
-        median_np1_s_df = execute_query(f"SELECT MEDIAN(total_time_s) as median_s FROM perf_runs WHERE version='{ver}' AND np=1 AND total_time_s IS NOT NULL")
-        median_np1_s = median_np1_s_df.iloc[0]['median_s'] if median_np1_s_df is not None and not median_np1_s_df.empty and pd.notna(median_np1_s_df.iloc[0]['median_s']) else pd.NA
+        
+        # Use the robust median fetching for scorecard as well
+        median_np1_query_df_sc = execute_query(f"SELECT MEDIAN(total_time_s) FROM perf_runs WHERE version='{ver}' AND np=1 AND total_time_s IS NOT NULL")
+        median_np1_s = pd.NA
+        if median_np1_query_df_sc is not None and not median_np1_query_df_sc.empty:
+            col_name_to_check = median_np1_query_df_sc.columns[0] # First column by default
+            if 'median(total_time_s)' in median_np1_query_df_sc.columns: col_name_to_check = 'median(total_time_s)'
+            elif 'median_total_time_s' in median_np1_query_df_sc.columns: col_name_to_check = 'median_total_time_s'
+            median_np1_s = median_np1_query_df_sc.iloc[0][col_name_to_check] if pd.notna(median_np1_query_df_sc.iloc[0][col_name_to_check]) else pd.NA
 
         cv_np1_from_stats_df = execute_query(f"SELECT CASE WHEN mean_s > 1e-9 THEN ROUND(sd_s / mean_s, 3) ELSE NULL END AS CV FROM run_stats WHERE version='{ver}' AND np=1 AND n > 1")
         cv_np1 = cv_np1_from_stats_df.iloc[0]['CV'] if cv_np1_from_stats_df is not None and not cv_np1_from_stats_df.empty and pd.notna(cv_np1_from_stats_df.iloc[0]['CV']) else pd.NA
-
-        np_for_max_metric = 1 # Default for V1, V3
+        
+        np_for_max_metric = 1
         if ver in ['V2.1 BroadcastAll', 'V2.2 ScatterHalo', 'V4 MPI+CUDA']:
-            max_np_df = execute_query(f"SELECT MAX(np) as max_np FROM perf_runs WHERE version='{ver}' AND total_time_s IS NOT NULL AND np > 0")
+            max_np_df = execute_query(f"SELECT MAX(np) as max_np FROM perf_runs WHERE version='{ver}' AND total_time_s IS NOT NULL AND np > 0") 
             if max_np_df is not None and not max_np_df.empty and pd.notna(max_np_df.iloc[0]['max_np']) and max_np_df.iloc[0]['max_np'] > 0 :
                 np_for_max_metric = int(max_np_df.iloc[0]['max_np'])
+        
+        median_np_max_query_df_sc = execute_query(f"SELECT MEDIAN(total_time_s) FROM perf_runs WHERE version='{ver}' AND np={np_for_max_metric} AND total_time_s IS NOT NULL")
+        median_np_max_s = pd.NA
+        if median_np_max_query_df_sc is not None and not median_np_max_query_df_sc.empty:
+            col_name_to_check_max = median_np_max_query_df_sc.columns[0]
+            if 'median(total_time_s)' in median_np_max_query_df_sc.columns: col_name_to_check_max = 'median(total_time_s)'
+            elif 'median_total_time_s' in median_np_max_query_df_sc.columns: col_name_to_check_max = 'median_total_time_s'
+            median_np_max_s = median_np_max_query_df_sc.iloc[0][col_name_to_check_max] if pd.notna(median_np_max_query_df_sc.iloc[0][col_name_to_check_max]) else pd.NA
 
-        median_np_max_s_df = execute_query(f"SELECT MEDIAN(total_time_s) as median_s FROM perf_runs WHERE version='{ver}' AND np={np_for_max_metric} AND total_time_s IS NOT NULL")
-        median_np_max_s = median_np_max_s_df.iloc[0]['median_s'] if median_np_max_s_df is not None and not median_np_max_s_df.empty and pd.notna(median_np_max_s_df.iloc[0]['median_s']) else pd.NA
 
         speedup_at_np_max, efficiency_at_np_max = pd.NA, pd.NA
         if pd.notna(median_np1_s) and median_np1_s > 1e-9 and pd.notna(median_np_max_s) and median_np_max_s > 1e-9 :
             speedup_at_np_max = median_np1_s / median_np_max_s
             if np_for_max_metric > 0: efficiency_at_np_max = speedup_at_np_max / np_for_max_metric
-        elif (ver == 'V1 Serial' or ver == 'V3 CUDA') and np_for_max_metric == 1 : # Explicitly handle non-scalable versions
-             speedup_at_np_max = 1.0 if pd.notna(median_np1_s) else pd.NA
-             efficiency_at_np_max = 1.0 if pd.notna(median_np1_s) else pd.NA
-
+        elif (ver == 'V1 Serial' or ver == 'V3 CUDA') and np_for_max_metric == 1 and pd.notna(median_np1_s): 
+             speedup_at_np_max = 1.0
+             efficiency_at_np_max = 1.0
 
         summary_data_final.append({
             'Version': ver, 'LOC (Core)': loc_val,
             'Median T_NP1 (s)': median_np1_s, 'CV @NP1 (Mean-based)': cv_np1,
-            f'Max Scaled NP': np_for_max_metric, # Store the NP used for max metrics
-            f'Median T @Max Scaled NP (s)': median_np_max_s,
-            f'Speedup (Medians) @Max Scaled NP': speedup_at_np_max,
-            f'Efficiency (Medians) @Max Scaled NP': efficiency_at_np_max
+            f'Median T_NP={np_for_max_metric} (s)': median_np_max_s,
+            f'Speedup (Medians) @NP={np_for_max_metric}': speedup_at_np_max,
+            f'Efficiency (Medians) @NP={np_for_max_metric}': efficiency_at_np_max
         })
     if summary_data_final:
         df_final_scorecard = pd.DataFrame(summary_data_final).set_index('Version')
@@ -1647,158 +2514,138 @@ if not df_loc.empty:
 else: print("[WARNING] df_loc empty. Scorecard skipped.")
 
 
-# --- 6. Markdown Cell for Qualitative Interpretation (Critique Addressed & ValueError Fixed) ---
+# --- 6. Markdown Cell for Qualitative Interpretation (Critique Addressed & All KeyErrors Fixed) ---
+# Re-fetch correlation for interpretation text, as df_perf_vs_loc might be empty if merge failed
+correlation_val_loc_perf_interp, p_val_loc_perf_interp = pd.NA, pd.NA
+if not df_perf_vs_loc.empty: # df_perf_vs_loc defined in section 2
+    df_corr_interp_md = df_perf_vs_loc[['total_loc', 'median_np1_s']].dropna()
+    if len(df_corr_interp_md) >=2: 
+        correlation_val_loc_perf_interp, p_val_loc_perf_interp = pearsonr(df_corr_interp_md["total_loc"], df_corr_interp_md["median_np1_s"])
 
-# Initialize strings to 'N/A' to prevent errors if data is missing
-correlation_r_str, correlation_p_val_str = "N/A", "N/A"
-if 'pearson_r_val' in locals() and pd.notna(pearson_r_val) and isinstance(pearson_r_val, (float, int)):
-    correlation_r_str = f"{pearson_r_val:.2f}"
-if 'p_value_val' in locals() and pd.notna(p_value_val) and isinstance(p_value_val, (float, int)):
-    correlation_p_val_str = f"{p_value_val:.2g}"
+median_t_npmax_v22_val_interp, np_val_str_v22_interp = get_scorecard_col_value_and_np(df_final_scorecard, 'V2.2 ScatterHalo', 'Median T_NP=', ' (s)')
+speedup_median_npmax_v22_val_interp, _ = get_scorecard_col_value_and_np(df_final_scorecard, 'V2.2 ScatterHalo', 'Speedup (Medians) @NP=')
 
+median_t_npmax_v4_val_interp, np_val_str_v4_interp = get_scorecard_col_value_and_np(df_final_scorecard, 'V4 MPI+CUDA', 'Median T_NP=', ' (s)')
+speedup_median_npmax_v4_val_interp, _ = get_scorecard_col_value_and_np(df_final_scorecard, 'V4 MPI+CUDA', 'Speedup (Medians) @NP=')
 
-# Helper function to safely get values from scorecard for interpretation
-def get_formatted_scorecard_value(df, version, col_name, fmt="{:.2f}"):
-    if not df.empty and version in df.index and col_name in df.columns and pd.notna(df.loc[version, col_name]):
-        val = df.loc[version, col_name]
-        if isinstance(val, (float, int)): return fmt.format(val)
-        return str(val) # Return as string if not float/int (e.g. already 'N/A' or text)
-    return "N/A"
+v4_loc_str_interp = "N/A"
+if not df_final_scorecard.empty and 'V4 MPI+CUDA' in df_final_scorecard.index and 'LOC (Core)' in df_final_scorecard.columns:
+    v4_loc_val_interp = df_final_scorecard.loc['V4 MPI+CUDA']['LOC (Core)']
+    if pd.notna(v4_loc_val_interp): v4_loc_str_interp = str(int(v4_loc_val_interp))
 
-v4_loc_str = get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'LOC (Core)', fmt="{:d}")
-v2_t_np1_val = df_final_scorecard.loc['V2.2 ScatterHalo']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V2.2 ScatterHalo' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V2.2 ScatterHalo']['Median T_NP1 (s)']) else None
-v4_t_np1_val = df_final_scorecard.loc['V4 MPI+CUDA']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V4 MPI+CUDA' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V4 MPI+CUDA']['Median T_NP1 (s)']) else None
+v2_t_np1_val_sc_interp = df_final_scorecard.loc['V2.2 ScatterHalo']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V2.2 ScatterHalo' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V2.2 ScatterHalo']['Median T_NP1 (s)']) else None
+v4_t_np1_val_sc_interp = df_final_scorecard.loc['V4 MPI+CUDA']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V4 MPI+CUDA' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V4 MPI+CUDA']['Median T_NP1 (s)']) else None
 
-speedup_factor_v4_vs_v22_np1_str = "N/A"
-if v2_t_np1_val is not None and v4_t_np1_val is not None and v4_t_np1_val > 1e-9:
-    speedup_factor_v4_vs_v22_np1_str = f"{(v2_t_np1_val / v4_t_np1_val):.2f}x"
+speedup_factor_v4_vs_v22_np1_str_interp = "N/A"
+if v2_t_np1_val_sc_interp is not None and v4_t_np1_val_sc_interp is not None and v4_t_np1_val_sc_interp > 1e-9: 
+    speedup_factor_v4_vs_v22_np1_str_interp = f"{(v2_t_np1_val_sc_interp / v4_t_np1_val_sc_interp):.2f}x"
 
-np_val_str_v4 = get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'Max Scaled NP', fmt="{:d}")
-v4_speedup_np_max_val = df_final_scorecard.loc['V4 MPI+CUDA']['Speedup (Medians) @Max Scaled NP'] if not df_final_scorecard.empty and 'V4 MPI+CUDA' in df_final_scorecard.index else pd.NA
-v4_speedup_np_max_str = f"{v4_speedup_np_max_val:.2f}x" if pd.notna(v4_speedup_np_max_val) and isinstance(v4_speedup_np_max_val, (int,float)) else "N/A"
+v4_speedup_np_max_str_interp = "N/A"
+if pd.notna(speedup_median_npmax_v4_val_interp) and isinstance(speedup_median_npmax_v4_val_interp, (int, float)):
+    v4_speedup_np_max_str_interp = f"{speedup_median_npmax_v4_val_interp:.2f}x"
+report_banner_interp = f"Key Insight: Hybrid V4 (LOC: {v4_loc_str_interp}) achieved ~{speedup_factor_v4_vs_v22_np1_str_interp} NP=1 speedup vs. MPI-only V2.2, but scaled poorly to {np_val_str_v4_interp if np_val_str_v4_interp != 'N/A' else 'Max'} processes (Median-based Speedup: {v4_speedup_np_max_str_interp}), highlighting severe host-staging bottlenecks."
 
-report_banner = f"Key Insight: Hybrid V4 (LOC: {v4_loc_str}) achieved ~{speedup_factor_v4_vs_v22_np1_str} NP=1 speedup vs. MPI-only V2.2, but scaled poorly to {np_val_str_v4 if np_val_str_v4 != 'N/A' else 'Max NP'} processes (Median-based Speedup: {v4_speedup_np_max_str}), highlighting severe host-staging bottlenecks."
+v1_median_t_np1_for_calc_interp = df_final_scorecard.loc['V1 Serial']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V1 Serial' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V1 Serial']['Median T_NP1 (s)']) else None
+v3_median_t_np1_for_calc_interp = df_final_scorecard.loc['V3 CUDA']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V3 CUDA' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V3 CUDA']['Median T_NP1 (s)']) else None
 
+v3_vs_v1_speedup_str_interp = "N/A"
+if v1_median_t_np1_for_calc_interp is not None and v3_median_t_np1_for_calc_interp is not None and v3_median_t_np1_for_calc_interp > 1e-9: 
+    v3_vs_v1_speedup_str_interp = f"{(v1_median_t_np1_for_calc_interp / v3_median_t_np1_for_calc_interp):.2f}x"
 
-v1_median_t_np1_for_calc = df_final_scorecard.loc['V1 Serial']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V1 Serial' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V1 Serial']['Median T_NP1 (s)']) else None
-v3_median_t_np1_for_calc = df_final_scorecard.loc['V3 CUDA']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V3 CUDA' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V3 CUDA']['Median T_NP1 (s)']) else None
-
-v3_vs_v1_speedup_str = "N/A"
-if v1_median_t_np1_for_calc is not None and v3_median_t_np1_for_calc is not None and v3_median_t_np1_for_calc > 1e-9:
-    v3_vs_v1_speedup_str = f"{(v1_median_t_np1_for_calc / v3_median_t_np1_for_calc):.2f}x"
-
-v4_vs_v3_relative_perf_str = "N/A"
-if v3_median_t_np1_for_calc is not None and v4_t_np1_val is not None and v4_t_np1_val > 1e-9: # v4_t_np1_val already defined
-    v4_is_faster_factor = v3_median_t_np1_for_calc / v4_t_np1_val
-    if v4_is_faster_factor > 1.005: # Add a small tolerance
-        v4_vs_v3_relative_perf_str = f"{v4_is_faster_factor:.2f}x faster than V3"
-    elif v4_is_faster_factor < 0.995:
-         v4_vs_v3_relative_perf_str = f"{(1/v4_is_faster_factor):.2f}x slower than V3"
+v4_vs_v3_relative_perf_str_interp = "N/A"
+if v3_median_t_np1_for_calc_interp is not None and v4_t_np1_val_sc_interp is not None and v4_t_np1_val_sc_interp > 1e-9: 
+    v4_is_faster_factor_interp = v3_median_t_np1_for_calc_interp / v4_t_np1_val_sc_interp
+    if v4_is_faster_factor_interp > 1.005: 
+        v4_vs_v3_relative_perf_str_interp = f"{v4_is_faster_factor_interp:.2f}x faster than V3"
+    elif v4_is_faster_factor_interp < 0.995:
+         v4_vs_v3_relative_perf_str_interp = f"{(1/v4_is_faster_factor_interp):.2f}x slower than V3"
     else:
-        v4_vs_v3_relative_perf_str = "about equal to V3"
+        v4_vs_v3_relative_perf_str_interp = "about equal to V3"
 
-# For V2.2 ScatterHalo in interpretation_md
-np_val_str_v22 = get_formatted_scorecard_value(df_final_scorecard, 'V2.2 ScatterHalo', 'Max Scaled NP', fmt="{:d}")
-speedup_median_npmax_v22_val = df_final_scorecard.loc['V2.2 ScatterHalo']['Speedup (Medians) @Max Scaled NP'] if not df_final_scorecard.empty and 'V2.2 ScatterHalo' in df_final_scorecard.index else pd.NA
-speedup_median_npmax_v22_formatted_str = f"{speedup_median_npmax_v22_val:.2f}x" if pd.notna(speedup_median_npmax_v22_val) and isinstance(speedup_median_npmax_v22_val, (float,int)) else "N/A"
-
+corr_r_str_interp = f"{correlation_val_loc_perf_interp:.2f}" if pd.notna(correlation_val_loc_perf_interp) and isinstance(correlation_val_loc_perf_interp, (int,float)) else "N/A"
+corr_p_str_interp = f"{p_val_loc_perf_interp:.2g}" if pd.notna(p_val_loc_perf_interp) and isinstance(p_val_loc_perf_interp, (int,float)) else "N/A"
+v22_speedup_fmt_interp = f"{speedup_median_npmax_v22_val_interp:.2f}" if pd.notna(speedup_median_npmax_v22_val_interp) and isinstance(speedup_median_npmax_v22_val_interp, (int,float)) else "N/A"
+v22_tnpmax_fmt_interp = f"{median_t_npmax_v22_val_interp:.3f}" if pd.notna(median_t_npmax_v22_val_interp) and isinstance(median_t_npmax_v22_val_interp, (int,float)) else "N/A"
+v4_tnpmax_fmt_interp = f"{median_t_npmax_v4_val_interp:.3f}" if pd.notna(median_t_npmax_v4_val_interp) and isinstance(median_t_npmax_v4_val_interp, (int,float)) else "N/A"
 
 interpretation_md = f"""
 ## Qualitative Interpretation of Advanced Analysis (Critique Addressed)
 
-{report_banner}
+{report_banner_interp}
 
-This analysis uses median runtimes for key performance indicators in the scorecard and radar chart for robustness. Note that general-purpose views like `speedup` (and plots from earlier cells if not regenerated) may still use MIN-based T1 for baseline performance.
+This analysis uses median runtimes for key performance indicators in the scorecard and radar chart for robustness. Note that general-purpose views like `speedup` (and plots from earlier cells if not regenerated) may still use MIN-based T1.
 
 **1. Code Complexity (LOC) vs. Single-Core/GPU Performance:**
 *   **Figure:** `adv_median_performance_vs_loc_corr_revised.png`
 *   **Takeaway:** Explores if more LOC (core algorithmic files) correlates with NP=1 median runtime.
 *   **Your Observation & Data:**
-    *   V1 Serial LOC: {get_formatted_scorecard_value(df_final_scorecard, 'V1 Serial', 'LOC (Core)', fmt="{{:d}}")}, Median T_NP1: {get_formatted_scorecard_value(df_final_scorecard, 'V1 Serial', 'Median T_NP1 (s)')}s.
-    *   V3 CUDA LOC: {get_formatted_scorecard_value(df_final_scorecard, 'V3 CUDA', 'LOC (Core)', fmt="{{:d}}")}, Median T_NP1: {get_formatted_scorecard_value(df_final_scorecard, 'V3 CUDA', 'Median T_NP1 (s)')}s.
-    *   V4 MPI+CUDA LOC: {get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'LOC (Core)', fmt="{{:d}}")}, Median T_NP1: {get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'Median T_NP1 (s)')}s.
-    *   Discuss: V3's GPU offload (LOC: {get_formatted_scorecard_value(df_final_scorecard, 'V3 CUDA', 'LOC (Core)', fmt="{{:d}}")}) yielded a median NP=1 runtime of {get_formatted_scorecard_value(df_final_scorecard, 'V3 CUDA', 'Median T_NP1 (s)')}s. This was {v3_vs_v1_speedup_str} faster than V1 Serial. V4 MPI+CUDA (highest LOC: {get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'LOC (Core)', fmt="{{:d}}")}) achieved a median NP=1 time of {get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'Median T_NP1 (s)')}s, which is {v4_vs_v3_relative_perf_str}.
-*   **Correlation:** Pearson R = **{correlation_r_str}**, p-value = **{correlation_p_val_str}**.
-    *   Interpret this: The correlation of R={correlation_r_str} (p={correlation_p_val_str}) suggests a weak and statistically insignificant linear relationship between LOC and median NP=1 runtime for this dataset. This indicates that the choice of parallelization paradigm (CPU, MPI, CUDA, Hybrid) and its specific implementation details had a much stronger impact on single-process performance than mere code volume.
+    *   V1 Serial LOC: {df_loc[df_loc['version']=='V1 Serial']['total_loc'].iloc[0] if not df_loc.empty and not df_loc[df_loc['version']=='V1 Serial'].empty else 'N/A'}, Median T_NP1: {df_final_scorecard.loc['V1 Serial']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V1 Serial' in df_final_scorecard.index else 'N/A'}s.
+    *   V3 CUDA LOC: {df_loc[df_loc['version']=='V3 CUDA']['total_loc'].iloc[0] if not df_loc.empty and not df_loc[df_loc['version']=='V3 CUDA'].empty else 'N/A'}, Median T_NP1: {df_final_scorecard.loc['V3 CUDA']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V3 CUDA' in df_final_scorecard.index else 'N/A'}s.
+    *   V4 MPI+CUDA LOC: {df_loc[df_loc['version']=='V4 MPI+CUDA']['total_loc'].iloc[0] if not df_loc.empty and not df_loc[df_loc['version']=='V4 MPI+CUDA'].empty else 'N/A'}, Median T_NP1: {df_final_scorecard.loc['V4 MPI+CUDA']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V4 MPI+CUDA' in df_final_scorecard.index else 'N/A'}s.
+    *   Discuss: V3's GPU offload (LOC: {df_loc[df_loc['version']=='V3 CUDA']['total_loc'].iloc[0] if not df_loc.empty and not df_loc[df_loc['version']=='V3 CUDA'].empty else 'N/A'}) yielded a median NP=1 runtime of {df_final_scorecard.loc['V3 CUDA']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V3 CUDA' in df_final_scorecard.index else 'N/A'}s. This was {v3_vs_v1_speedup_str_interp} faster than V1 Serial. V4 MPI+CUDA (highest LOC: {df_loc[df_loc['version']=='V4 MPI+CUDA']['total_loc'].iloc[0] if not df_loc.empty and not df_loc[df_loc['version']=='V4 MPI+CUDA'].empty else 'N/A'}) achieved a median NP=1 time of {df_final_scorecard.loc['V4 MPI+CUDA']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V4 MPI+CUDA' in df_final_scorecard.index else 'N/A'}s, which is {v4_vs_v3_relative_perf_str_interp}.
+*   **Correlation:** Pearson R = **{corr_r_str_interp}**, p-value = **{corr_p_str_interp}**.
+    *   Interpret this: The correlation of R={corr_r_str_interp} (p={corr_p_str_interp}) suggests a weak and statistically insignificant linear relationship between LOC and median NP=1 runtime for this dataset. This indicates that the choice of parallelization paradigm (CPU, MPI, CUDA, Hybrid) and its specific implementation details had a much stronger impact on single-process performance than mere code volume.
 
 **2. Runtime Variability (Stability):**
-*   **Figure:** `adv_runtime_variability_cv_annotated_revised.png` (Note: 'n' values are in the displayed table `df_variability`).
+*   **Figure:** `adv_runtime_variability_cv_annotated_revised.png` (Note: 'n' values are in the displayed table).
 *   **Takeaway:** CV (StdDev/Mean from `run_stats`) shows consistency. Lower is better.
 *   **Your Observation & Data:**
-    *   V1 Serial (NP=1) CV: {get_formatted_scorecard_value(df_final_scorecard, 'V1 Serial', 'CV @NP1 (Mean-based)')}.
-    *   V3 CUDA (NP=1) CV: {get_formatted_scorecard_value(df_final_scorecard, 'V3 CUDA', 'CV @NP1 (Mean-based)')}.
-    *   V2.2 ScatterHalo (NP={np_val_str_v22 if np_val_str_v22 != 'N/A' else 'Max'}) CV: {df_variability[(df_variability['version']=='V2.2 ScatterHalo') & (df_variability['np']==int(np_val_str_v22 if np_val_str_v22.isdigit() else 0))]['CV'].iloc[0] if df_variability is not None and np_val_str_v22.isdigit() and not df_variability[(df_variability['version']=='V2.2 ScatterHalo') & (df_variability['np']==int(np_val_str_v22))].empty else 'N/A'}.
-    *   V4 MPI+CUDA (NP={np_val_str_v4 if np_val_str_v4 != 'N/A' else 'Max'}) CV: {df_variability[(df_variability['version']=='V4 MPI+CUDA') & (df_variability['np']==int(np_val_str_v4 if np_val_str_v4.isdigit() else 0))]['CV'].iloc[0] if df_variability is not None and np_val_str_v4.isdigit() and not df_variability[(df_variability['version']=='V4 MPI+CUDA') & (df_variability['np']==int(np_val_str_v4))].empty else 'N/A'}.
-    *   Discuss: V1 Serial and V3 CUDA NP=1 runs show CVs suggesting moderate stability. V4 MPI+CUDA at NP=1 has a notably high CV ({get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'CV @NP1 (Mean-based)')}), indicating significant run-to-run variation potentially due to MPI setup or complex interactions even at NP=1. For MPI versions, examine if CV increases with NP. Small 'n' values (check table `df_variability` for sample sizes) reduce CV reliability.
+    *   V1 Serial (NP=1) CV: {df_final_scorecard.loc['V1 Serial']['CV @NP1 (Mean-based)'] if not df_final_scorecard.empty and 'V1 Serial' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V1 Serial']['CV @NP1 (Mean-based)']) else 'N/A'}.
+    *   V3 CUDA (NP=1) CV: {df_final_scorecard.loc['V3 CUDA']['CV @NP1 (Mean-based)'] if not df_final_scorecard.empty and 'V3 CUDA' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V3 CUDA']['CV @NP1 (Mean-based)']) else 'N/A'}.
+    *   V2.2 ScatterHalo (NP={np_val_str_v22_interp if np_val_str_v22_interp != 'N/A' else 'Max'}) CV: {df_variability[(df_variability['version']=='V2.2 ScatterHalo') & (df_variability['np']==int(np_val_str_v22_interp if np_val_str_v22_interp.isdigit() else 0))]['CV'].iloc[0] if df_variability is not None and np_val_str_v22_interp.isdigit() and not df_variability[(df_variability['version']=='V2.2 ScatterHalo') & (df_variability['np']==int(np_val_str_v22_interp))].empty else 'N/A'}.
+    *   V4 MPI+CUDA (NP={np_val_str_v4_interp if np_val_str_v4_interp != 'N/A' else 'Max'}) CV: {df_variability[(df_variability['version']=='V4 MPI+CUDA') & (df_variability['np']==int(np_val_str_v4_interp if np_val_str_v4_interp.isdigit() else 0))]['CV'].iloc[0] if df_variability is not None and np_val_str_v4_interp.isdigit() and not df_variability[(df_variability['version']=='V4 MPI+CUDA') & (df_variability['np']==int(np_val_str_v4_interp))].empty else 'N/A'}.
+    *   Discuss: V1 Serial and V3 CUDA NP=1 runs show CVs suggesting moderate stability. V4 MPI+CUDA at NP=1 has a notably high CV ({df_final_scorecard.loc['V4 MPI+CUDA']['CV @NP1 (Mean-based)'] if not df_final_scorecard.empty and 'V4 MPI+CUDA' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V4 MPI+CUDA']['CV @NP1 (Mean-based)']) else 'N/A'}), indicating significant run-to-run variation. For MPI versions, examine if CV increases with NP. Small 'n' values (check table) reduce CV reliability.
 
 **3. Multi-Dimensional Performance (Radar Chart):**
 *   **Figure:** `adv_multi_metric_radar_chart_final_revised.png`
-*   **Metrics (Median-based Speedup/Efficiency for this chart):** 'NP1 Perf (1/Med.T_NP1)', 'Max Scaled Speedup', 'Max Scaled Efficiency', 'Code Volume (log10 LOC)' (normalized so outer edge means less code).
-*   **Takeaway:** Visualizes relative strengths. Outer edge is "better" for each metric's normalized scale.
+*   **Metrics (Median-based S/E for this chart):** 'NP1 Perf (1/Med.T_NP1)', 'Max Scaled Speedup', 'Max Scaled Efficiency', 'Code Volume (log10 LOC)' (normalized so outer edge means less code).
+*   **Takeaway:** Visualizes relative strengths. Outer edge is "better".
 *   **Your Observation & Data:**
-    *   V1 Serial: Strong on 'Code Volume' (less code is better, so it's far out on that axis after normalization). Performance metrics are closer to the center (worse).
-    *   V2.2 ScatterHalo: Aims for a balance, showing some 'Max Scaled Speedup' and 'Efficiency' for CPU parallelism compared to V1, but with higher 'Code Volume'.
-    *   V3 CUDA: Dominates 'NP1 Perf.' due to GPU acceleration. 'Max Scaled Speedup/Efficiency' are 1.0 by definition (as it's NP=1). 'Code Volume' is moderate.
-    *   V4 MPI+CUDA: Achieved good 'NP1 Perf.' (comparable to V3), but its 'Max Scaled Speedup'/'Efficiency' at NP={np_val_str_v4 if np_val_str_v4 != 'N/A' else 'Max'} are poor due to host-staging, pulling it inwards on those axes relative to its NP=1 potential. It has the highest 'Code Volume' (least favorable, so closest to center on that axis before normalization, furthest after 1-x normalization).
-    *   Refer to the scorecard for absolute magnitudes. The radar chart shows relative normalized strengths.
+    *   V1 Serial: Strong on 'Code Volume'.
+    *   V2.2 ScatterHalo: Balances Speedup/Efficiency for CPU parallelism.
+    *   V3 CUDA: Dominates 'NP1 Perf.'.
+    *   V4 MPI+CUDA: Achieved good 'NP1 Perf.' (comparable to V3), but its Speedup/Efficiency at NP={np_val_str_v4_interp if np_val_str_v4_interp != 'N/A' else 'Max'} are poor due to host-staging, pulling it inwards on those axes. Highest 'Code Volume' (least favorable).
+    *   Refer to scorecard for absolute magnitudes.
 
 **4. Overall Project Trajectory & Bottlenecks:**
-*   **Scorecard Table:** `project_final_scorecard_median_cv_from_stats.md` (Medians for T_NP1, T@Max_Scaled_NP; Speedup/Efficiency from these medians).
-*   **Super-linear Speedup Check:** The V2.2 Speedup (Medians) @NP={np_val_str_v22 if np_val_str_v22 != 'N/A' else 'Max'} is {speedup_median_npmax_v22_formatted_str}. This is typically sub-linear for this type of problem after accounting for communication, as expected.
+*   **Scorecard Table:** `project_final_scorecard_median_cv_from_stats.md` (Medians for T_NP1, T_NPmax; S/E from these medians).
+*   **Super-linear Speedup Check:** The V2.2 Speedup (Medians) @NP={np_val_str_v22_interp if np_val_str_v22_interp != 'N/A' else 'Max'} is {v22_speedup_fmt_interp}. This is sub-linear, as expected.
 *   **Performance Discussion (from Scorecard):**
-    *   V1 Median T_NP1: {get_formatted_scorecard_value(df_final_scorecard, 'V1 Serial', 'Median T_NP1 (s)')}s is the reference.
-    *   V2.2 Median T @Max Scaled NP (NP={np_val_str_v22 if np_val_str_v22 != 'N/A' else 'Max'}): {get_formatted_scorecard_value(df_final_scorecard, 'V2.2 ScatterHalo', 'Median T @Max Scaled NP (s)')}s; Median-based Speedup: {speedup_median_npmax_v22_formatted_str}. Demonstrates effective CPU scaling with MPI scatter/halo.
-    *   V3 Median T_NP1: {get_formatted_scorecard_value(df_final_scorecard, 'V3 CUDA', 'Median T_NP1 (s)')}s (approx. {v3_vs_v1_speedup_str} vs V1), showing significant GPU acceleration.
-    *   V4 Median T @Max Scaled NP (NP={np_val_str_v4 if np_val_str_v4 != 'N/A' else 'Max'}): {get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'Median T @Max Scaled NP (s)')}s; Median-based Speedup: {v4_speedup_np_max_str}. Poor scaling indicates host-staging overheads dominate benefits of multi-GPU distribution for this problem size and implementation.
-*   **Bottleneck Migration:** The project successfully demonstrated bottleneck migration: V1 (CPU compute-bound) -> V2.2 (MPI communication overheads and remaining CPU compute) -> V3 (GPU compute, PCIe bandwidth for H-D transfers) -> V4 (Host-staging: MPI communication on CPU, multiple full-tile H-D-H transfers, CPU logic for halo management).
+    *   V1 Median T_NP1: {df_final_scorecard.loc['V1 Serial']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V1 Serial' in df_final_scorecard.index else 'N/A'}s.
+    *   V2.2 Median T_NP={np_val_str_v22_interp if np_val_str_v22_interp != 'N/A' else 'Max'}: {v22_tnpmax_fmt_interp}s; Median-based Speedup: {v22_speedup_fmt_interp}x. Effective CPU scaling.
+    *   V3 Median T_NP1: {df_final_scorecard.loc['V3 CUDA']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V3 CUDA' in df_final_scorecard.index else 'N/A'}s (approx. {v3_vs_v1_speedup_str_interp} vs V1).
+    *   V4 Median T_NP={np_val_str_v4_interp if np_val_str_v4_interp != 'N/A' else 'Max'}: {v4_tnpmax_fmt_interp}s; Median-based Speedup: {v4_speedup_np_max_str_interp}. Poor scaling due to host-staging.
+*   **Bottleneck Migration:** Confirmed progression. V1(CPU) -> V2.2(MPI comms/CPU) -> V3(PCIe/GPU kernel) -> V4(Host-staging: MPI host comms, PCIe full-tile copies, host logic).
 
 **5. Expert Perspectives & Recommendations (Critique Addressed):**
-*   **Performance Engineer:** The V4 MPI+CUDA version's poor scaling ({v4_speedup_np_max_str} at NP={np_val_str_v4 if np_val_str_v4 != 'N/A' else 'Max'}) despite good NP=1 performance ({get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'Median T_NP1 (s)')}s) clearly points to inter-process communication and data staging (CPU-GPU transfers) as the major bottleneck. Profiling V4 with Nsight Systems is essential to quantify these overheads. The primary recommendation is to **implement V5 (CUDA-Aware MPI)** to allow direct GPU-GPU communication, bypassing CPU staging for halo exchanges. Subsequently, investigate asynchronous operations (CUDA streams for compute/copy overlap, non-blocking MPI) for V4/V5. The high CV@NP1 for V4 MPI+CUDA ({get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'CV @NP1 (Mean-based)')}) also warrants investigation – could be initial MPI synchronization costs or variability in GPU resource availability even when running as a single MPI process.
-*   **Software Engineer:** The Lines of Code (LOC) for V4 MPI+CUDA ({get_formatted_scorecard_value(df_final_scorecard, 'V4 MPI+CUDA', 'LOC (Core)', fmt="{{:d}}")}) being the highest reflects the significant integration complexity of combining MPI and CUDA with manual host staging. The `alexnetTileForwardCUDA` in V4 acts as a monolithic GPU compute step per rank, which is good for local GPU utilization but highlights the data movement problem to/from it. The high runtime variability (CV) for V4 is a concern for reproducibility and indicates potential instability or contention. Future work should focus on reducing V4's complexity and improving its stability if V5 is not pursued.
-*   **Data Analyst:** Using median runtimes for scorecard KPIs enhances robustness against outliers compared to using minimums. The small sample sizes ('n' values in `df_variability`) for some runs limit the precision of Confidence Intervals around CV and median estimates. The statistically insignificant Pearson R ({correlation_r_str}, p={correlation_p_val_str}) between LOC and NP=1 performance implies that for this project, the architectural paradigm (Serial, MPI, CUDA, Hybrid) and the efficiency of its implementation (e.g., scatter/halo vs. broadcast, host-staging vs. direct GPU) were far more determinant of single-process performance than simply the amount of code written.
-*   **Domain Expert (HPC for AI):** The V1 serial median time ({get_formatted_scorecard_value(df_final_scorecard, 'V1 Serial', 'Median T_NP1 (s)')}s) serves as a critical reference; ensure modern compiler optimizations (-O3, target architecture flags) were used. V3's strong performance ({v3_vs_v1_speedup_str} over V1) confirms the suitability of GPUs for CNN computations. V4's poor scaling is a classic symptom of naive hybrid implementations where data movement between host and device for inter-process communication dominates. **CUDA-Aware MPI (V5) is the standard HPC solution to mitigate this for distributed GPU training/inference of such workloads.** Further, optimizing data layout (e.g., NCHW vs. NHWC) and using optimized libraries (cuDNN, if full layers were built) would be typical next steps in a production setting, though out of scope here.
+*   **Performance Engineer:** Profile V4 (Nsight Systems). **CUDA-Aware MPI (V5) is primary recommendation.** Then async operations for V4/V5. V4 CV@NP1 ({df_final_scorecard.loc['V4 MPI+CUDA']['CV @NP1 (Mean-based)'] if not df_final_scorecard.empty and 'V4 MPI+CUDA' in df_final_scorecard.index and pd.notna(df_final_scorecard.loc['V4 MPI+CUDA']['CV @NP1 (Mean-based)']) else 'N/A'}) needs investigation.
+*   **Software Engineer:** V4 LOC reflects complexity. `alexnetTileForwardCUDA` monolith. High V4 CV is problematic.
+*   **Data Analyst:** Medians improve robustness. Small 'n' limits CI precision. Insignificant LOC vs. Perf correlation (R={corr_r_str_interp}, p={corr_p_str_interp}) implies paradigm choice/optimization quality matters more than LOC alone for NP=1 performance.
+*   **Domain Expert (HPC for AI):** V1 median time ({df_final_scorecard.loc['V1 Serial']['Median T_NP1 (s)'] if not df_final_scorecard.empty and 'V1 Serial' in df_final_scorecard.index else 'N/A'}s) is a reference; ensure good serial compiler optimization. V4's poor scaling is typical of naive hybrid implementations. **CUDA-Aware MPI essential for scaling distributed GPU for this type of workload.**
 
-**Further Project Steps (as outlined in presentation):**
-1.  **Implement V5 (CUDA-Aware MPI):** Directly address V4's primary bottleneck.
-2.  **Asynchronous Overlap:** If V5 proves difficult or for further optimization, explore CUDA streams and non-blocking MPI to overlap data transfers with computation.
-3.  **Cluster Profiling:** Utilize Nsight Systems/Compute on the target cluster for detailed analysis of V3, V4, and any V5 implementation to precisely identify bottlenecks.
-4.  **Reporting:** Clearly distinguish between MIN-based metrics (often used for "best case" speedup plots) and MEDIAN-based metrics (used here for robust scorecard evaluation). Discuss the impact of small sample sizes on statistical confidence where applicable. Provide comprehensive details of the hardware/software environment used for reproducibility.
+**Further Project Steps:**
+1.  **Implement V5 (CUDA-Aware MPI).**
+2.  **Asynchronous Overlap:** If V5 is difficult, or for further optimization.
+3.  **Cluster Profiling:** Use Nsight Systems for V3/V4/V5.
+4.  **Report:** Clearly differentiate MIN-based plot metrics from MEDIAN-based scorecard metrics. Discuss impact of small 'n' on statistical confidence. Detail the hardware/software environment.
 """
 
-if 'Markdown' in globals() and 'display' in globals(): display(Markdown(interpretation_md))
-else: print(interpretation_md)
+if 'IPython.display' in sys.modules and 'Markdown' in globals() and 'display' in globals():
+    display(Markdown(interpretation_md))
+else: 
+    print(interpretation_md) 
 
-interpretation_file_path = visuals_output_dir / "qualitative_interpretation_summary_final_valueerror_fixed.md"
+interpretation_file_path = visuals_output_dir / "qualitative_interpretation_summary_final_all_errors_fixed.md"
 with open(interpretation_file_path, "w", encoding="utf-8") as f: f.write(interpretation_md)
-print(f"\n✓ Final qualitative interpretation (ValueError fixed) saved to {interpretation_file_path}")
+print(f"\n✓ Final qualitative interpretation (All KeyErrors fixed) saved to {interpretation_file_path}")
 
-print("\n--- Grand Synthesis Cell (Critique Addressed & ValueError Fixed) Successfully Completed ---")
+print("\n--- Grand Synthesis Cell (Critique Addressed & All KeyErrors Fixed) Successfully Completed ---")
 ```
 
     [INFO] Seaborn theme applied for enhanced plot aesthetics.
     [INFO] All plots and advanced exports for this cell will be saved to: /home/myko/CS485/CUDA-MPI-GPU-Cluster-Programming/analysis_visuals_final
     
     --- 1. Aggregating Lines of Code (LOC) for Canonical Versions ---
-    [INFO] Attempting to execute query: SELECT COUNT(*) as count FROM source_stats...
-    [INFO] Attempting to execute query: 
-            SELECT 'V1 Serial' as version, COALESCE(SUM(loc), 0) as total_loc
-            FROM source_stats...
-    [INFO] Attempting to execute query: 
-            SELECT 'V2.1 BroadcastAll' as version, COALESCE(SUM(loc), 0) as total_loc
-            FROM sour...
-    [INFO] Attempting to execute query: 
-            SELECT 'V2.2 ScatterHalo' as version, COALESCE(SUM(loc), 0) as total_loc
-            FROM sourc...
-    [INFO] Attempting to execute query: 
-            SELECT 'V3 CUDA' as version, COALESCE(SUM(loc), 0) as total_loc
-            FROM source_stats
-     ...
-    [INFO] Attempting to execute query: 
-            SELECT 'V4 MPI+CUDA' as version, COALESCE(SUM(loc), 0) as total_loc
-            FROM source_sta...
-    [INFO] Attempting to execute query: 
-            SELECT 'V5 MPI+CUDA-Aware' as version, COALESCE(SUM(loc), 0) as total_loc
-            FROM sour...
     Aggregated LOC for core algorithmic code (src/, include/):
 
 
@@ -1858,68 +2705,329 @@ print("\n--- Grand Synthesis Cell (Critique Addressed & ValueError Fixed) Succes
 
     
     --- 2. Plotting: Median NP=1 Performance vs. Lines of Code (Revised Visuals) ---
-    [INFO] Attempting to execute query: SELECT version, MEDIAN(total_time_s) as median_np1_s FROM perf_runs WHERE np = 1 AND total_time_s IS...
+    [DEBUG] df_median_np1 columns after pandas groupby and rename: Index(['version', 'median_np1_s'], dtype='object')
+    ✓ Median Performance vs. LOC plot saved to analysis_visuals_final/adv_median_performance_vs_loc_corr_revised.png
 
 
 
-    ---------------------------------------------------------------------------
-
-    KeyError                                  Traceback (most recent call last)
-
-    /tmp/ipykernel_96940/2115401082.py in ?()
-        164 if not df_loc_for_plot.empty and plt is not None:
-        165     df_median_np1 = execute_query("SELECT version, MEDIAN(total_time_s) as median_np1_s FROM perf_runs WHERE np = 1 AND total_time_s IS NOT NULL GROUP BY version")
-        166 
-        167     if df_median_np1 is not None and not df_median_np1.empty:
-    --> 168         df_perf_vs_loc = pd.merge(df_median_np1, df_loc_for_plot, on="version")
-        169 
-        170         if not df_perf_vs_loc.empty and len(df_perf_vs_loc) > 1 :
-        171             plt.figure(figsize=(11, 7))
+    
+![png](analysis_files/analysis_18_3.png)
+    
 
 
-    ~/CS485/CUDA-MPI-GPU-Cluster-Programming/.venv/lib/python3.12/site-packages/pandas/core/reshape/merge.py in ?(left, right, how, on, left_on, right_on, left_index, right_index, sort, suffixes, copy, indicator, validate)
-        166             validate=validate,
-        167             copy=copy,
-        168         )
-        169     else:
-    --> 170         op = _MergeOperation(
-        171             left_df,
-        172             right_df,
-        173             how=how,
+    
+    --- 3. Runtime Variability (CV with 'n' annotations, improved aesthetics) ---
+    CV for Runtimes (Lower = More Stable):
 
 
-    ~/CS485/CUDA-MPI-GPU-Cluster-Programming/.venv/lib/python3.12/site-packages/pandas/core/reshape/merge.py in ?(self, left, right, how, on, left_on, right_on, left_index, right_index, sort, suffixes, indicator, validate)
-        790             self.right_join_keys,
-        791             self.join_names,
-        792             left_drop,
-        793             right_drop,
-    --> 794         ) = self._get_merge_keys()
-        795 
-        796         if left_drop:
-        797             self.left = self.left._drop_labels_or_levels(left_drop)
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>version</th>
+      <th>np</th>
+      <th>n</th>
+      <th>mean_s</th>
+      <th>sd_s</th>
+      <th>CV</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V1 Serial</td>
+      <td>1</td>
+      <td>14</td>
+      <td>0.8238</td>
+      <td>0.1766</td>
+      <td>0.214</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>1</td>
+      <td>13</td>
+      <td>0.7781</td>
+      <td>0.2074</td>
+      <td>0.267</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>2</td>
+      <td>13</td>
+      <td>0.5392</td>
+      <td>0.2659</td>
+      <td>0.493</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>V2.2 ScatterHalo</td>
+      <td>4</td>
+      <td>12</td>
+      <td>0.3351</td>
+      <td>0.1411</td>
+      <td>0.421</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>V3 CUDA</td>
+      <td>1</td>
+      <td>11</td>
+      <td>0.4348</td>
+      <td>0.1535</td>
+      <td>0.353</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>V4 MPI+CUDA</td>
+      <td>1</td>
+      <td>10</td>
+      <td>0.5317</td>
+      <td>0.4111</td>
+      <td>0.773</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>V4 MPI+CUDA</td>
+      <td>2</td>
+      <td>12</td>
+      <td>0.5016</td>
+      <td>0.2604</td>
+      <td>0.519</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>V4 MPI+CUDA</td>
+      <td>4</td>
+      <td>9</td>
+      <td>0.4071</td>
+      <td>0.1045</td>
+      <td>0.257</td>
+    </tr>
+  </tbody>
+</table>
+</div>
 
 
-    ~/CS485/CUDA-MPI-GPU-Cluster-Programming/.venv/lib/python3.12/site-packages/pandas/core/reshape/merge.py in ?(self)
-       1306                     if lk is not None:
-       1307                         # Then we're either Hashable or a wrong-length arraylike,
-       1308                         #  the latter of which will raise
-       1309                         lk = cast(Hashable, lk)
-    -> 1310                         left_keys.append(left._get_label_or_level_values(lk))
-       1311                         join_names.append(lk)
-       1312                     else:
-       1313                         # work-around for merge_asof(left_index=True)
+    ✓ Runtime CV plot saved to analysis_visuals_final/adv_runtime_variability_cv_annotated_revised.png
 
 
-    ~/CS485/CUDA-MPI-GPU-Cluster-Programming/.venv/lib/python3.12/site-packages/pandas/core/generic.py in ?(self, key, axis)
-       1907             values = self.xs(key, axis=other_axes[0])._values
-       1908         elif self._is_level_reference(key, axis=axis):
-       1909             values = self.axes[axis].get_level_values(key)._values
-       1910         else:
-    -> 1911             raise KeyError(key)
-       1912 
-       1913         # Check for duplicates
-       1914         if values.ndim > 1:
+
+    
+![png](analysis_files/analysis_18_7.png)
+    
 
 
-    KeyError: 'version'
+    
+    --- 4. Multi-Metric Radar Chart for Key Versions (Revised Metrics & Visuals) ---
+    ✓ Final Revised Radar chart saved to analysis_visuals_final/adv_multi_metric_radar_chart_final_revised.png
+
+
+
+    
+![png](analysis_files/analysis_18_9.png)
+    
+
+
+    
+    --- 5. Generating Final Comprehensive Scorecard Table (Median Runtimes, CV from run_stats) ---
+    
+    --- Final Scorecard (Median Runtimes, CV from run_stats) ---
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>LOC (Core)</th>
+      <th>Median T_NP1 (s)</th>
+      <th>CV @NP1 (Mean-based)</th>
+      <th>Median T_NP=1 (s)</th>
+      <th>Speedup (Medians) @NP=1</th>
+      <th>Efficiency (Medians) @NP=1</th>
+      <th>Median T_NP=4 (s)</th>
+      <th>Speedup (Medians) @NP=4</th>
+      <th>Efficiency (Medians) @NP=4</th>
+    </tr>
+    <tr>
+      <th>Version</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>V1 Serial</th>
+      <td>525</td>
+      <td>0.784</td>
+      <td>0.214</td>
+      <td>0.784</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>V2.1 BroadcastAll</th>
+      <td>306</td>
+      <td>0.743</td>
+      <td>0.418</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>0.819</td>
+      <td>0.907</td>
+      <td>0.227</td>
+    </tr>
+    <tr>
+      <th>V2.2 ScatterHalo</th>
+      <td>483</td>
+      <td>0.714</td>
+      <td>0.267</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>0.287</td>
+      <td>2.489</td>
+      <td>0.622</td>
+    </tr>
+    <tr>
+      <th>V3 CUDA</th>
+      <td>354</td>
+      <td>0.488</td>
+      <td>0.353</td>
+      <td>0.488</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>V4 MPI+CUDA</th>
+      <td>576</td>
+      <td>0.429</td>
+      <td>0.773</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>0.401</td>
+      <td>1.070</td>
+      <td>0.268</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+    ✓ Final scorecard table exported to analysis_visuals_final/project_final_scorecard_median_cv_from_stats.md
+
+
+
+
+## Qualitative Interpretation of Advanced Analysis (Critique Addressed)
+
+Key Insight: Hybrid V4 (LOC: 576) achieved ~1.66x NP=1 speedup vs. MPI-only V2.2, but scaled poorly to 1 processes (Median-based Speedup: N/A), highlighting severe host-staging bottlenecks.
+
+This analysis uses median runtimes for key performance indicators in the scorecard and radar chart for robustness. Note that general-purpose views like `speedup` (and plots from earlier cells if not regenerated) may still use MIN-based T1.
+
+**1. Code Complexity (LOC) vs. Single-Core/GPU Performance:**
+*   **Figure:** `adv_median_performance_vs_loc_corr_revised.png`
+*   **Takeaway:** Explores if more LOC (core algorithmic files) correlates with NP=1 median runtime.
+*   **Your Observation & Data:**
+    *   V1 Serial LOC: 525, Median T_NP1: 0.784s.
+    *   V3 CUDA LOC: 354, Median T_NP1: 0.488s.
+    *   V4 MPI+CUDA LOC: 576, Median T_NP1: 0.429s.
+    *   Discuss: V3's GPU offload (LOC: 354) yielded a median NP=1 runtime of 0.488s. This was 1.61x faster than V1 Serial. V4 MPI+CUDA (highest LOC: 576) achieved a median NP=1 time of 0.429s, which is 1.14x faster than V3.
+*   **Correlation:** Pearson R = **-0.18**, p-value = **0.77**.
+    *   Interpret this: The correlation of R=-0.18 (p=0.77) suggests a weak and statistically insignificant linear relationship between LOC and median NP=1 runtime for this dataset. This indicates that the choice of parallelization paradigm (CPU, MPI, CUDA, Hybrid) and its specific implementation details had a much stronger impact on single-process performance than mere code volume.
+
+**2. Runtime Variability (Stability):**
+*   **Figure:** `adv_runtime_variability_cv_annotated_revised.png` (Note: 'n' values are in the displayed table).
+*   **Takeaway:** CV (StdDev/Mean from `run_stats`) shows consistency. Lower is better.
+*   **Your Observation & Data:**
+    *   V1 Serial (NP=1) CV: 0.214.
+    *   V3 CUDA (NP=1) CV: 0.353.
+    *   V2.2 ScatterHalo (NP=1) CV: 0.267.
+    *   V4 MPI+CUDA (NP=1) CV: 0.773.
+    *   Discuss: V1 Serial and V3 CUDA NP=1 runs show CVs suggesting moderate stability. V4 MPI+CUDA at NP=1 has a notably high CV (0.773), indicating significant run-to-run variation. For MPI versions, examine if CV increases with NP. Small 'n' values (check table) reduce CV reliability.
+
+**3. Multi-Dimensional Performance (Radar Chart):**
+*   **Figure:** `adv_multi_metric_radar_chart_final_revised.png`
+*   **Metrics (Median-based S/E for this chart):** 'NP1 Perf (1/Med.T_NP1)', 'Max Scaled Speedup', 'Max Scaled Efficiency', 'Code Volume (log10 LOC)' (normalized so outer edge means less code).
+*   **Takeaway:** Visualizes relative strengths. Outer edge is "better".
+*   **Your Observation & Data:**
+    *   V1 Serial: Strong on 'Code Volume'.
+    *   V2.2 ScatterHalo: Balances Speedup/Efficiency for CPU parallelism.
+    *   V3 CUDA: Dominates 'NP1 Perf.'.
+    *   V4 MPI+CUDA: Achieved good 'NP1 Perf.' (comparable to V3), but its Speedup/Efficiency at NP=1 are poor due to host-staging, pulling it inwards on those axes. Highest 'Code Volume' (least favorable).
+    *   Refer to scorecard for absolute magnitudes.
+
+**4. Overall Project Trajectory & Bottlenecks:**
+*   **Scorecard Table:** `project_final_scorecard_median_cv_from_stats.md` (Medians for T_NP1, T_NPmax; S/E from these medians).
+*   **Super-linear Speedup Check:** The V2.2 Speedup (Medians) @NP=1 is N/A. This is sub-linear, as expected.
+*   **Performance Discussion (from Scorecard):**
+    *   V1 Median T_NP1: 0.784s.
+    *   V2.2 Median T_NP=1: N/As; Median-based Speedup: N/Ax. Effective CPU scaling.
+    *   V3 Median T_NP1: 0.488s (approx. 1.61x vs V1).
+    *   V4 Median T_NP=1: N/As; Median-based Speedup: N/A. Poor scaling due to host-staging.
+*   **Bottleneck Migration:** Confirmed progression. V1(CPU) -> V2.2(MPI comms/CPU) -> V3(PCIe/GPU kernel) -> V4(Host-staging: MPI host comms, PCIe full-tile copies, host logic).
+
+**5. Expert Perspectives & Recommendations (Critique Addressed):**
+*   **Performance Engineer:** Profile V4 (Nsight Systems). **CUDA-Aware MPI (V5) is primary recommendation.** Then async operations for V4/V5. V4 CV@NP1 (0.773) needs investigation.
+*   **Software Engineer:** V4 LOC reflects complexity. `alexnetTileForwardCUDA` monolith. High V4 CV is problematic.
+*   **Data Analyst:** Medians improve robustness. Small 'n' limits CI precision. Insignificant LOC vs. Perf correlation (R=-0.18, p=0.77) implies paradigm choice/optimization quality matters more than LOC alone for NP=1 performance.
+*   **Domain Expert (HPC for AI):** V1 median time (0.784s) is a reference; ensure good serial compiler optimization. V4's poor scaling is typical of naive hybrid implementations. **CUDA-Aware MPI essential for scaling distributed GPU for this type of workload.**
+
+**Further Project Steps:**
+1.  **Implement V5 (CUDA-Aware MPI).**
+2.  **Asynchronous Overlap:** If V5 is difficult, or for further optimization.
+3.  **Cluster Profiling:** Use Nsight Systems for V3/V4/V5.
+4.  **Report:** Clearly differentiate MIN-based plot metrics from MEDIAN-based scorecard metrics. Discuss impact of small 'n' on statistical confidence. Detail the hardware/software environment.
+
+
+
+    
+    ✓ Final qualitative interpretation (All KeyErrors fixed) saved to analysis_visuals_final/qualitative_interpretation_summary_final_all_errors_fixed.md
+    
+    --- Grand Synthesis Cell (Critique Addressed & All KeyErrors Fixed) Successfully Completed ---
 

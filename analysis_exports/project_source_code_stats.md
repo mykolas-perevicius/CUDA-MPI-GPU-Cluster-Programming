@@ -1,7 +1,5 @@
 | relpath                                                     |   loc |   func_cnt |   include_cnt |   cuda_kernel_cnt |
 |:------------------------------------------------------------|------:|-----------:|--------------:|------------------:|
-| DISCUSSION.md                                               |   158 |          0 |             0 |                 0 |
-| AI.md                                                       |   208 |          2 |             0 |                 0 |
 | RESEARCH.md                                                 |   317 |          0 |             0 |                 0 |
 | Makefile.original_v4_v5                                     |    26 |          0 |             0 |                 0 |
 | README.md                                                   |   247 |          0 |             0 |                 0 |
