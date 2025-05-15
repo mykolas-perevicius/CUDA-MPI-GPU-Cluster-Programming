@@ -1,4 +1,5 @@
 Compiling (CUDA): src/alexnet_cuda.cu
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
 /nix/store/24sdvjs6rfqs69d21gdn437mb3vc0svh-gcc-14.2.1.20250322/include/c++/14.2.1.20250322/type_traits(1610): error: "__is_nothrow_new_constructible" is not a function or static data member
       constexpr bool __is_nothrow_new_constructible
                      ^
