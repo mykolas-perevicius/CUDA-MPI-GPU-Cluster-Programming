@@ -1,0 +1,4 @@
+g++ -Wall -std=c++11 -O3  -I./include -c src/main.cpp -o src/main.o
+g++ -Wall -std=c++11 -O3  -I./include -c src/alexnet_serial.cpp -o src/alexnet_serial.o
+g++ -Wall -std=c++11 -O3  -I./include -c src/layers_serial.cpp -o src/layers_serial.o
+g++ -lm -o template src/main.o src/alexnet_serial.o src/layers_serial.o -lm # Linker flags often go at the end

@@ -1,0 +1,11 @@
+Compiling .cpp file: src/main_mpi_cuda.cpp
+Command: nvcc -std=c++17 -O3 -ccbin=mpicxx -Xcompiler=-Wall -Wextra -fno-diagnostics-show-caret -fno-diagnostics-show-option -fmessage-length=0 -cudart=shared --cudadevrt=none -Xcudafe --diag_suppress=186 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_50,code=compute_50 -Xcompiler=-I/nix/store/pkyfbl863xpc0nvnid6c71dd318y9f6n-openmpi-4.1.6/include  -I./include -c src/main_mpi_cuda.cpp -o src/main_mpi_cuda.o
+Compiling .cu file: src/alexnet_mpi_cuda.cu
+Command: nvcc -std=c++17 -O3 -ccbin=mpicxx -Xcompiler=-Wall -Wextra -fno-diagnostics-show-caret -fno-diagnostics-show-option -fmessage-length=0 -cudart=shared --cudadevrt=none -Xcudafe --diag_suppress=186 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_50,code=compute_50 -Xcompiler=-I/nix/store/pkyfbl863xpc0nvnid6c71dd318y9f6n-openmpi-4.1.6/include  -I./include -dc src/alexnet_mpi_cuda.cu -o src/alexnet_mpi_cuda.o
+src/alexnet_mpi_cuda.cu: In function ‘void alexnetForwardPassMPI_CUDA(const std::vector<float>&, int, int, int, int, const LayerParams&, const LayerParams&, std::vector<float>&, int, int)’:
+src/alexnet_mpi_cuda.cu:102:157: warning: comparison of unsigned expression in ‘>= 0’ is always true
+src/alexnet_mpi_cuda.cu:103:105: warning: comparison of unsigned expression in ‘>= 0’ is always true
+Compiling .cu file: src/layers_mpi_cuda.cu
+Command: nvcc -std=c++17 -O3 -ccbin=mpicxx -Xcompiler=-Wall -Wextra -fno-diagnostics-show-caret -fno-diagnostics-show-option -fmessage-length=0 -cudart=shared --cudadevrt=none -Xcudafe --diag_suppress=186 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_50,code=compute_50 -Xcompiler=-I/nix/store/pkyfbl863xpc0nvnid6c71dd318y9f6n-openmpi-4.1.6/include  -I./include -dc src/layers_mpi_cuda.cu -o src/layers_mpi_cuda.o
+nvcc error   : 'mpicxx' died due to signal 2 
+make: *** [Makefile:64: src/layers_mpi_cuda.o] Error 2

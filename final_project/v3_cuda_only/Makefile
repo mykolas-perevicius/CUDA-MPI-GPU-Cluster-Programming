@@ -1,58 +1,69 @@
 # ───────────────────────────────────────────────────────────────
-# AlexNet V3 – CUDA‑only build
-# Tested with CUDA 11‑14 (nvcc >= 11.0)
+# AlexNet V3 – CUDA‑only build (FINAL - STRICTLY EXPLICIT)
 # ───────────────────────────────────────────────────────────────
 
-# Allow overriding from script, otherwise default to a common set including sm_86
-ifndef HOST_CUDA_ARCH_FLAGS
-  # Default for better portability, ensure sm_86 for your RTX 3090
-  # You can add more architectures if you plan to run on diverse hardware
-  # compute_X0 means PTX for X.0 and forwards compatibility
-  EFFECTIVE_CUDA_ARCH := \
-                        -gencode arch=compute_75,code=sm_75 \
-                        -gencode arch=compute_86,code=sm_86 \
-                        -gencode arch=compute_86,code=compute_86
-else
-  EFFECTIVE_CUDA_ARCH := $(HOST_CUDA_ARCH_FLAGS)
-endif
+# Define GPU_ARCH_FLAGS:
+GPU_ARCH_FLAGS ?= \
+                  -gencode arch=compute_50,code=sm_50 \
+                  -gencode arch=compute_50,code=compute_50
 
+# Compiler and flags
+NVCC          := nvcc
 NVCCFLAGS     := -std=c++11 -O3 \
                  -Xcompiler="-Wall -Wextra" \
                  -cudart=shared \
-                 --cudadevrt=none        
+                 --cudadevrt=none \
+                 $(GPU_ARCH_FLAGS)
 
-INCLUDES      := -I./include
-LDFLAGS       := -lm                      # cudart is linked automatically via -cudart=shared
+INCLUDES      := -I./include # Assuming include is in the same dir as Makefile
+LDFLAGS       := -lm
+
+# --- Explicit Source and Object File Definitions ---
+# All .o files will be placed in the 'src' directory.
 
 SRC_DIR       := src
 OBJ_DIR       := $(SRC_DIR)
-SRCS          := $(SRC_DIR)/alexnet_cuda.cu \
-                 $(SRC_DIR)/layers_cuda.cu \
-                 $(SRC_DIR)/main_cuda.cpp
-OBJS          := $(SRCS:.cu=.o)
-OBJS          := $(OBJS:.cpp=.o)
+
+# Explicitly define each object file
+ALEXNET_CUDA_OBJ := $(OBJ_DIR)/alexnet_cuda.o
+LAYERS_CUDA_OBJ  := $(OBJ_DIR)/layers_cuda.o
+MAIN_CUDA_OBJ    := $(OBJ_DIR)/main_cuda.o
+
+# List of all object files
+OBJS          := $(ALEXNET_CUDA_OBJ) $(LAYERS_CUDA_OBJ) $(MAIN_CUDA_OBJ)
 
 TARGET        := template
 
-# default rule
+.PHONY: all clean default
+
+# Default target
+default: all
+
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	@echo '--- Linking V3 Target ---'
-	@echo 'NVCC Command: nvcc $(NVCCFLAGS) $(EFFECTIVE_CUDA_ARCH) -o $@ $^ $(LDFLAGS)'
-	@nvcc $(NVCCFLAGS) $(EFFECTIVE_CUDA_ARCH) -o $@ $^ $(LDFLAGS)
+	@echo '--- Linking V3 Target $(TARGET) from $^ ---'
+	@echo "NVCC Command: $(NVCC) $(NVCCFLAGS) -o $@ $^ $(LDFLAGS)"
+	@$(NVCC) $(NVCCFLAGS) -o $@ $^ $(LDFLAGS)
 
-# pattern rules
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cu
-	@echo 'Compiling (CUDA): $<'
-	@nvcc $(NVCCFLAGS) $(EFFECTIVE_CUDA_ARCH) $(INCLUDES) -c $< -o $@
+# --- Explicit Rules for Each Object File ---
+# No pattern rules. Each object is built by its own specific rule.
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	@echo 'Compiling (C++): $<'
-	@nvcc $(NVCCFLAGS) $(EFFECTIVE_CUDA_ARCH) $(INCLUDES) -c $< -o $@
+$(ALEXNET_CUDA_OBJ): $(SRC_DIR)/alexnet_cuda.cu $(wildcard include/*.hpp) Makefile
+	@echo 'Compiling (CUDA): $(SRC_DIR)/alexnet_cuda.cu to $(ALEXNET_CUDA_OBJ)'
+	@mkdir -p $(OBJ_DIR)
+	@$(NVCC) $(NVCCFLAGS) $(INCLUDES) -dc $(SRC_DIR)/alexnet_cuda.cu -o $(ALEXNET_CUDA_OBJ)
 
-# housekeeping
+$(LAYERS_CUDA_OBJ): $(SRC_DIR)/layers_cuda.cu $(wildcard include/*.hpp) Makefile
+	@echo 'Compiling (CUDA): $(SRC_DIR)/layers_cuda.cu to $(LAYERS_CUDA_OBJ)'
+	@mkdir -p $(OBJ_DIR)
+	@$(NVCC) $(NVCCFLAGS) $(INCLUDES) -dc $(SRC_DIR)/layers_cuda.cu -o $(LAYERS_CUDA_OBJ)
+
+$(MAIN_CUDA_OBJ): $(SRC_DIR)/main_cuda.cpp $(wildcard include/*.hpp) Makefile
+	@echo 'Compiling (C++ via NVCC): $(SRC_DIR)/main_cuda.cpp to $(MAIN_CUDA_OBJ)'
+	@mkdir -p $(OBJ_DIR)
+	@$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $(SRC_DIR)/main_cuda.cpp -o $(MAIN_CUDA_OBJ)
+
 clean:
-	rm -f $(OBJ_DIR)/*.o $(TARGET)
-
-.PHONY: all clean
+	@echo 'Cleaning V3...'
+	@rm -f $(OBJ_DIR)/*.o $(TARGET)

@@ -1,0 +1,14 @@
+Multi-Machine Full Suite Test Orchestration Log - Session: fullsuite_20250515_145733_nixos
+[2025-05-15 14:57:33] Starting Full Suite Test Script...
+[2025-05-15 14:57:33] Session ID: fullsuite_20250515_145733_nixos
+[2025-05-15 14:57:33] Logging to Directory: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250515_145733_nixos
+[2025-05-15 14:57:33] Project Root: /home/myko/CUDA-MPI-GPU-Cluster-Programming
+[2025-05-15 14:57:33] Final Project Dir: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project
+[2025-05-15 14:57:33] Target hosts configured:
+[2025-05-15 14:57:33]   - myko@192.168.1.158 50
+[2025-05-15 14:57:33]   - myko@192.168.1.97 50
+[2025-05-15 14:57:33] --- Running Initial Cluster Setup ---
+[2025-05-15 14:57:33] --- Phase 1: Checking/Setting up Passwordless SSH ---
+[2025-05-15 14:57:33] Checking SSH to myko@192.168.1.158 from myko@192.168.1.158...
+[2025-05-15 14:57:33] SUCCESS: Passwordless SSH to myko@192.168.1.158.
+[2025-05-15 14:57:33] Checking SSH to myko@192.168.1.97 from myko@192.168.1.158...

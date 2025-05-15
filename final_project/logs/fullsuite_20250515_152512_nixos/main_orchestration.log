@@ -1,0 +1,21 @@
+Multi-Machine Full Suite Test Orchestration Log - Session: fullsuite_20250515_152512_nixos
+[2025-05-15 15:25:12] Starting Full Suite Test Script...
+[2025-05-15 15:25:12] Session ID: fullsuite_20250515_152512_nixos
+[2025-05-15 15:25:12] Logging to Directory: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250515_152512_nixos
+[2025-05-15 15:25:12] Project Root: /home/myko/CUDA-MPI-GPU-Cluster-Programming
+[2025-05-15 15:25:12] Final Project Dir: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project
+[2025-05-15 15:25:12] Target hosts configured:
+[2025-05-15 15:25:12]   - myko@192.168.1.158 50
+[2025-05-15 15:25:12]   - myko@192.168.1.97 50
+[2025-05-15 15:25:12] --- Running Initial Cluster Setup ---
+[2025-05-15 15:25:12] --- Phase 1: Checking/Setting up Passwordless SSH ---
+[2025-05-15 15:25:12] Checking SSH to myko@192.168.1.158 from myko@192.168.1.158...
+[2025-05-15 15:25:13] SUCCESS: Passwordless SSH to myko@192.168.1.158.
+[2025-05-15 15:25:13] Checking SSH to myko@192.168.1.97 from myko@192.168.1.158...
+[2025-05-15 15:25:16] INFO: Attempting ssh-copy-id to myko@192.168.1.97. You may be prompted for password.
+/run/current-system/sw/bin/ssh-copy-id: INFO: Source of key(s) to be installed: ssh-add -L
+/run/current-system/sw/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+
+/run/current-system/sw/bin/ssh-copy-id: ERROR: ssh: connect to host 192.168.1.97 port 22: No route to host
+
+[2025-05-15 15:25:22] ERROR: ssh-copy-id myko@192.168.1.97 command failed. Debug manually.

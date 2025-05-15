@@ -1,9 +1,5 @@
 # ────────────────────────────────────────────────────────────────
 # Version‑4  (MPI + CUDA)  Makefile
-# Tested on: CUDA 12.x  •  Open MPI 5.x  •  NixOS 24.05
-# Fixes:
-#   • filters out all “‑Wl,*” flags nvcc rejects
-#   • disables dev‑runtime, uses shared cudart
 # ────────────────────────────────────────────────────────────────
 
 DIAG_FLAGS := -fno-diagnostics-show-caret -fno-diagnostics-show-option -fmessage-length=0
@@ -11,58 +7,74 @@ DIAG_FLAGS := -fno-diagnostics-show-caret -fno-diagnostics-show-option -fmessage
 NVCC    := nvcc
 CXX_MPI := mpicxx
 
-MPI_CFLAGS  := $(shell $(CXX_MPI) --showme:compile 2>/dev/null)
-MPI_LDFLAGS := $(filter-out -Wl%,$(shell $(CXX_MPI) --showme:link 2>/dev/null))
+# Get MPI CFLAGS for the host compiler part
+MPI_COMPILE_FLAGS_RAW := $(shell $(CXX_MPI) --showme:compile 2>/dev/null)
+# Filter out potentially problematic -Wl flags from compile flags too, if any
+MPI_COMPILE_FLAGS := $(filter-out -Wl%,$(MPI_COMPILE_FLAGS_RAW))
 
-# Allow overriding from script, otherwise default
-ifndef HOST_CUDA_ARCH_FLAGS
-  EFFECTIVE_GPU_ARCH_FLAGS := \
-                        -gencode arch=compute_75,code=sm_75 \
-                        -gencode arch=compute_86,code=sm_86 \
-                        -gencode arch=compute_86,code=compute_86
-else
-  EFFECTIVE_GPU_ARCH_FLAGS := $(HOST_CUDA_ARCH_FLAGS)
-endif
+# Get MPI LDFLAGS, focusing on -L and -l, try to avoid problematic ones for nvcc
+MPI_LINK_SHOWME := $(shell $(CXX_MPI) --showme:link 2>/dev/null)
+# Extract -L paths
+MPI_L_PATHS := $(filter -L%,$(MPI_LINK_SHOWME))
+# Extract -l library names
+MPI_LIBS := $(filter -l%,$(MPI_LINK_SHOWME))
+# Remove any remaining -Wl flags from the general flags if we take others
+MPI_OTHER_LINK_FLAGS := $(filter-out -L% -l% -Wl%,$(MPI_LINK_SHOWME))
 
-NVCC_FLAGS := -std=c++17 -O3 \
-              -ccbin=$(CXX_MPI) \
-              -Xcompiler="-Wall -Wextra $(DIAG_FLAGS) $(MPI_CFLAGS)" \
-              $(EFFECTIVE_GPU_ARCH_FLAGS) \
-              -cudart=shared \
-              --cudadevrt=none \
-              -Xcudafe "--diag_suppress=186"
 
-$(info EFFECTIVE_GPU_ARCH_FLAGS is [$(EFFECTIVE_GPU_ARCH_FLAGS)])
-$(info HOST_CUDA_ARCH_FLAGS is [$(HOST_CUDA_ARCH_FLAGS)])
+# Define GPU_ARCH_FLAGS:
+GPU_ARCH_FLAGS ?= \
+                  -gencode arch=compute_50,code=sm_50 \
+                  -gencode arch=compute_50,code=compute_50
+
+NVCC_BASE_FLAGS := -std=c++17 -O3 \
+                   -ccbin=$(CXX_MPI) \
+                   -Xcompiler="-Wall -Wextra $(DIAG_FLAGS)" \
+                   -cudart=shared \
+                   --cudadevrt=none \
+                   -Xcudafe "--diag_suppress=186"
+
+# Apply GPU flags to base flags
+FULL_NVCC_COMPILE_FLAGS := $(NVCC_BASE_FLAGS) $(GPU_ARCH_FLAGS) \
+                           -Xcompiler="$(MPI_COMPILE_FLAGS)" # Add MPI CFLAGS for host part
+
+# For linking, we need the GPU arch flags for device linking consistency
+FULL_NVCC_LINK_FLAGS := $(NVCC_BASE_FLAGS) $(GPU_ARCH_FLAGS)
+
 
 INCLUDES := -I./include
 TARGET   := template
 
-SRCS_CPP := src/main_mpi_cuda.cpp
-SRCS_CU  := src/alexnet_mpi_cuda.cu src/layers_mpi_cuda.cu
-OBJS_CPP := $(SRCS_CPP:.cpp=.o)
-OBJS_CU  := $(SRCS_CU:.cu=.o)
+SRCS_CPP := $(wildcard src/*.cpp)
+SRCS_CU  := $(wildcard src/*.cu)
+OBJS_CPP := $(patsubst src/%.cpp,src/%.o,$(SRCS_CPP))
+OBJS_CU  := $(patsubst src/%.cu,src/%.o,$(SRCS_CU))
 OBJS     := $(OBJS_CPP) $(OBJS_CU)
 
-LDFLAGS := $(MPI_LDFLAGS) -lm
+# Construct LDFLAGS carefully
+LDFLAGS := $(MPI_L_PATHS) $(MPI_LIBS) $(MPI_OTHER_LINK_FLAGS) -lm
 
 .PHONY: all clean
 all: $(TARGET)
 
-$(OBJS_CU): %.o: %.cu $(wildcard include/*.hpp) Makefile
+# Rule for .cu files (device code needs -dc for separate compilation)
+src/%.o: src/%.cu $(wildcard include/*.hpp) Makefile
 	@echo "Compiling .cu file: $<"
-	@echo "Command: $(NVCC) $(NVCC_FLAGS) $(INCLUDES) -dc $< -o $@"
-	@$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -dc $< -o $@
+	@echo "Command: $(NVCC) $(FULL_NVCC_COMPILE_FLAGS) $(INCLUDES) -dc $< -o $@"
+	@$(NVCC) $(FULL_NVCC_COMPILE_FLAGS) $(INCLUDES) -dc $< -o $@
 
-$(OBJS_CPP): %.o: %.cpp $(wildcard include/*.hpp) Makefile		
+# Rule for .cpp files (host code, compiled by nvcc using mpicxx as backend)
+src/%.o: src/%.cpp $(wildcard include/*.hpp) Makefile		
 	@echo "Compiling .cpp file: $<"
-	@echo "Command: $(NVCC) $(NVCC_FLAGS) $(INCLUDES) -c  $< -o $@"
-	@$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -c  $< -o $@
+	@echo "Command: $(NVCC) $(FULL_NVCC_COMPILE_FLAGS) $(INCLUDES) -c $< -o $@"
+	@$(NVCC) $(FULL_NVCC_COMPILE_FLAGS) $(INCLUDES) -c $< -o $@
 
+# Linking all objects
 $(TARGET): $(OBJS)
 	@echo "Linking target: $@"
-	@echo "Command: $(NVCC) $(NVCC_FLAGS) $^ -o $@ $(LDFLAGS)"
-	@$(NVCC) $(NVCC_FLAGS) $^ -o $@ $(LDFLAGS)
+	@echo "Command: $(NVCC) $(FULL_NVCC_LINK_FLAGS) $^ -o $@ $(LDFLAGS)"
+	@$(NVCC) $(FULL_NVCC_LINK_FLAGS) $^ -o $@ $(LDFLAGS)
   
 clean:
-	rm -f $(TARGET) $(OBJS)
+	@echo 'Cleaning V4...'
+	@rm -f src/*.o $(TARGET)

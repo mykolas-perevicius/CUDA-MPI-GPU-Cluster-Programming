@@ -1,0 +1,23 @@
+Multi-Machine Full Suite Test Orchestration Log - Session: fullsuite_20250515_133833_nixos
+[2025-05-15 13:38:33] Starting Full Suite Test Script...
+[2025-05-15 13:38:33] Session ID: fullsuite_20250515_133833_nixos
+[2025-05-15 13:38:33] Logging to Directory: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250515_133833_nixos
+[2025-05-15 13:38:33] Project Root: /home/myko/CUDA-MPI-GPU-Cluster-Programming
+[2025-05-15 13:38:33] Final Project Dir: /home/myko/CUDA-MPI-GPU-Cluster-Programming/final_project
+[2025-05-15 13:38:33] Target hosts configured:
+[2025-05-15 13:38:33]   - myko@192.168.1.158 50
+[2025-05-15 13:38:33]   - myko@192.168.1.97 50
+[2025-05-15 13:38:33] --- Running Initial Cluster Setup ---
+[2025-05-15 13:38:33] --- Phase 1: Checking/Setting up Passwordless SSH ---
+[2025-05-15 13:38:33] Checking SSH to myko@192.168.1.158 from myko@192.168.1.158...
+[2025-05-15 13:38:34] SUCCESS: Passwordless SSH to myko@192.168.1.158.
+[2025-05-15 13:38:34] Checking SSH to myko@192.168.1.97 from myko@192.168.1.158...
+[2025-05-15 13:38:37] INFO: Attempting ssh-copy-id to myko@192.168.1.97. You may be prompted for password.
+/run/current-system/sw/bin/ssh-copy-id: INFO: Source of key(s) to be installed: ssh-add -L
+/run/current-system/sw/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+ERROR: Assertion failure: in filter_ids(): scratch_dir was not correctly set up (SCRATCH_DIR = "/home/myko/.ssh/ssh-copy-id.FlKGtzDZgh")
+
+/run/current-system/sw/bin/ssh-copy-id: WARNING: All keys were skipped because they already exist on the remote system.
+		(if you think this is a mistake, you may want to use -f option)
+
+[2025-05-15 13:38:37] INFO: ssh-copy-id myko@192.168.1.97 finished. Verifying...
