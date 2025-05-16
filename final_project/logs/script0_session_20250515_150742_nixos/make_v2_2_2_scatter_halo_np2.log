@@ -1,0 +1,2 @@
+mpicxx -std=c++11 -O3 -Wall -Wextra -pedantic -Wno-cast-function-type -I./include -c src/main.cpp -o src/main.o
+make: *** [Makefile:23: src/main.o] Interrupt

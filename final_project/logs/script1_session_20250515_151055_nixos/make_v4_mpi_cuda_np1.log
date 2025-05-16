@@ -1,0 +1,4 @@
+Compiling .cpp file: src/main_mpi_cuda.cpp
+Command: nvcc -std=c++17 -O3 -ccbin=mpicxx -Xcompiler=-Wall -Wextra -fno-diagnostics-show-caret -fno-diagnostics-show-option -fmessage-length=0 -cudart=shared --cudadevrt=none -Xcudafe --diag_suppress=186 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_50,code=compute_50 -Xcompiler=  -I./include -c src/main_mpi_cuda.cpp -o src/main_mpi_cuda.o
+sh: line 1: nvcc: command not found
+make: *** [Makefile:70: src/main_mpi_cuda.o] Error 127
