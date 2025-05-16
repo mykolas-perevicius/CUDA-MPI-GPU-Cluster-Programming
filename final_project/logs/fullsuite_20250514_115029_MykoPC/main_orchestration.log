@@ -1,0 +1,18 @@
+Multi-Machine Full Suite Test Orchestration Log - Session: fullsuite_20250514_115029_MykoPC
+[2025-05-14 11:50:30] Starting Full Suite Test Script...
+[2025-05-14 11:50:30] Session ID: fullsuite_20250514_115029_MykoPC
+[2025-05-14 11:50:30] Logging to Directory: /home/mykoalas/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250514_115029_MykoPC
+[2025-05-14 11:50:30] Project Root: /home/mykoalas/CUDA-MPI-GPU-Cluster-Programming
+[2025-05-14 11:50:30] Final Project Dir: /home/mykoalas/CUDA-MPI-GPU-Cluster-Programming/final_project
+[2025-05-14 11:50:30] Target hosts configured:
+[2025-05-14 11:50:30]   - mykoalas@172.28.101.0 75
+[2025-05-14 11:50:30]   - mykoalas@172.28.124.167 86
+[2025-05-14 11:50:30] --- Running Initial Cluster Setup ---
+[2025-05-14 11:50:30] --- Phase 1: Checking/Setting up Passwordless SSH ---
+[2025-05-14 11:50:30] Checking SSH to mykoalas@172.28.101.0 from mykoalas@172.28.101.0...
+[2025-05-14 11:50:30] INFO: Attempting ssh-copy-id to mykoalas@172.28.101.0. You may be prompted for password.
+/usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/home/mykoalas/.ssh/id_rsa.pub"
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+/usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed -- if you are prompted now it is to install the new keys
+mykoalas@172.28.101.0: Permission denied (publickey).
+[2025-05-14 11:50:34] ERROR: ssh-copy-id mykoalas@172.28.101.0 command failed. Debug manually.

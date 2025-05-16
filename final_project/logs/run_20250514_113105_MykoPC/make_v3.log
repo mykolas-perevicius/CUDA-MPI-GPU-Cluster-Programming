@@ -1,0 +1,3 @@
+Compiling (CUDA): src/alexnet_cuda.cu
+/bin/sh: 1: nvcc: not found
+make: *** [Makefile:48: src/alexnet_cuda.o] Error 127

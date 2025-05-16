@@ -1,0 +1,20 @@
+Multi-Machine Full Suite Test Orchestration Log - Session: fullsuite_20250514_112304_MykoPC
+[2025-05-14 11:23:04] Starting Full Suite Test Script...
+[2025-05-14 11:23:04] Session ID: fullsuite_20250514_112304_MykoPC
+[2025-05-14 11:23:04] Logging to Directory: /home/mykoalas/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250514_112304_MykoPC
+[2025-05-14 11:23:04] Project Root: /home/mykoalas/CUDA-MPI-GPU-Cluster-Programming
+[2025-05-14 11:23:04] Final Project Dir: /home/mykoalas/CUDA-MPI-GPU-Cluster-Programming/final_project
+[2025-05-14 11:23:04] Target hosts configured:
+[2025-05-14 11:23:04]   - myko@192.168.1.158 50
+[2025-05-14 11:23:04]   - myko@192.168.1.97 50
+[2025-05-14 11:23:04] --- Running Initial Cluster Setup ---
+[2025-05-14 11:23:04] --- Phase 1: Checking/Setting up Passwordless SSH ---
+[2025-05-14 11:23:04] No local SSH key. Generating...
+[2025-05-14 11:23:04] Checking SSH to myko@192.168.1.158 from myko@192.168.1.158...
+[2025-05-14 11:23:07] INFO: Attempting ssh-copy-id to myko@192.168.1.158. You may be prompted for password.
+/usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/home/mykoalas/.ssh/id_rsa.pub"
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+
+/usr/bin/ssh-copy-id: ERROR: ssh: connect to host 192.168.1.158 port 22: No route to host
+
+[2025-05-14 11:23:13] ERROR: ssh-copy-id myko@192.168.1.158 command failed. Debug manually.

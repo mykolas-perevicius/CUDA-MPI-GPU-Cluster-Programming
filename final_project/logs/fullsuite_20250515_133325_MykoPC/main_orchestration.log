@@ -1,0 +1,16 @@
+Multi-Machine Full Suite Test Orchestration Log - Session: fullsuite_20250515_133325_MykoPC
+[2025-05-15 13:33:25] Starting Full Suite Test Script...
+[2025-05-15 13:33:25] Session ID: fullsuite_20250515_133325_MykoPC
+[2025-05-15 13:33:25] Logging to Directory: /home/mykoalas/CUDA-MPI-GPU-Cluster-Programming/final_project/logs/fullsuite_20250515_133325_MykoPC
+[2025-05-15 13:33:25] Project Root: /home/mykoalas/CUDA-MPI-GPU-Cluster-Programming
+[2025-05-15 13:33:25] Final Project Dir: /home/mykoalas/CUDA-MPI-GPU-Cluster-Programming/final_project
+[2025-05-15 13:33:25] Target hosts configured:
+[2025-05-15 13:33:25]   - mykoalas@172.28.101.0 75
+[2025-05-15 13:33:25]   - mykoalas@172.28.124.167 86
+[2025-05-15 13:33:25] --- Running Initial Cluster Setup ---
+[2025-05-15 13:33:25] --- Phase 1: Checking/Setting up Passwordless SSH ---
+[2025-05-15 13:33:25] Checking SSH to mykoalas@172.28.101.0 from mykoalas@172.28.101.0...
+[2025-05-15 13:33:27] SUCCESS: Passwordless SSH to mykoalas@172.28.101.0.
+[2025-05-15 13:33:27] Checking SSH to mykoalas@172.28.124.167 from mykoalas@172.28.101.0...
+[2025-05-15 13:33:32] INFO: Attempting ssh-copy-id to mykoalas@172.28.124.167. You may be prompted for password.
+/usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/home/mykoalas/.ssh/id_rsa.pub"

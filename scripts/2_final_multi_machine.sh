@@ -13,12 +13,21 @@ set -euo pipefail
 #
 # The FIRST host in this list will be treated as the "master" node,
 # from which mpirun commands are initiated and where this script should be run.
+
+# HOSTS FOR LAPTOP TESTING
+# HOSTS_INFO=(
+#     "myko@192.168.1.158 50"  # Master: 'nixos' (Quadro M1200, sm_50) - REPLACE IP IF DIFFERENT
+#     "myko@192.168.1.97 50"   # Worker: 'laptopB' (Quadro M1200, sm_50)
+#     # To add your PC later (example):
+#     # "your_pc_user@<PC_WSL_IP_ADDRESS> 86" # Worker PC (RTX 3090, sm_86)
+# )
+
+#HOSTS FOR HOME TESTING
 HOSTS_INFO=(
-    "myko@192.168.1.158 50"  # Master: 'nixos' (Quadro M1200, sm_50) - REPLACE IP IF DIFFERENT
-    "myko@192.168.1.97 50"   # Worker: 'laptopB' (Quadro M1200, sm_50)
-    # To add your PC later (example):
-    # "your_pc_user@<PC_WSL_IP_ADDRESS> 86" # Worker PC (RTX 3090, sm_86)
+    "mykoalas@172.28.101.0 75"  # Master: Laptop WSL2 (MykoPC, sm_75)
+    "mykoalas@172.28.124.167 86" # Worker: PC WSL2 (DESKTOP-B5PMJB5, sm_86)
 )
+
 
 # Set to "true" if your project directory (defined by $ROOT_DIR below) is on a
 # shared filesystem (e.g., NFS) accessible at the EXACT SAME PATH on all hosts.
