@@ -1,3 +1,5 @@
+Update @ 12/2/2025: Hi! If you're reading this, some of the pictures here are broken BUT the diagrams I used are probably the top search result if you just google, for example, "AlexNet Diagram". Furthermore, this project only focuses on the *first half* of AlexNet with a DIY approach on my 3090. If you have an AMD GPU this project may not be compatible. Next version will have a wider compatibility for GPUs
+
 # Combined Project Documentation (final_project)
 
 *This file combines key project README, context, research, and discussion logs.*
