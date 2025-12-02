@@ -1,6 +1,6 @@
 Update @ 12/2/2025: Hi! If you're reading this, some of the pictures here are broken BUT the diagrams I used are probably the top search result if you just google, for example, "AlexNet Diagram". Furthermore, this project only focuses on the *first half* of AlexNet with a DIY approach on my 3090. If you have an AMD GPU this project may not be compatible. Next version will have a wider compatibility for GPUs
 
-Finally, I wasn't able to update this repo with my final data as I had to present and then the semester ended, but nonetheless the code works and you can run the experiment yourself and see if your predictions were correct! There is a quickstart in the README below
+Finally, I wasn't able to update this repo with my final data as I had to present and then the semester ended, but nonetheless the code works and you can run the experiment yourself and see if your predictions were correct! There is a quickstart in the README below (Sections 7 and 8)
 
 # Combined Project Documentation (final_project)
 
